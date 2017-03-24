@@ -144,4 +144,3 @@ def install(parser, args, **kwargs):
     # Dump log file if asked to
     if args.log_format is not None:
         test_suite.dump()
-
