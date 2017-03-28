@@ -48,7 +48,8 @@ description = "Installs packages, provides cdash output."
 def setup_parser(subparser):
     subparser.add_argument(
         '-c', '--complete', action='store_true', dest='complete',
-        help='Simple is build only, complete is configure, build and test.')
+        help='Use "complete" CDash output format showing configure, '
+        'build, and test results')
     subparser.add_argument(
         '-s', '--site', action='store', dest='site',
         help='Location where testing occurred.')
@@ -59,7 +60,7 @@ def setup_parser(subparser):
         '-p', '--project', action='store', dest='project',
         help='project name on cdash')
     subparser.add_argument(
-        'yamlFile', nargs=argparse.REMAINDER,
+        'yaml_files', nargs=argparse.REMAINDER,
         help="Yaml test descriptions. Example found in spack docs.")
 
 
@@ -181,8 +182,8 @@ def test_suite(parser, args):
     spackio_url = "https://spack.io/cdash/submit.php?project="
     """Compiles a list of tests from a yaml file.
     Runs Spec and concretize then produces cdash format."""
-    if not args.yamlFile:
-        tty.die("spack testsuite requires a yaml file.")
+    if not args.yaml_files:
+        tty.die("spack test-suite requires at least one YAML file.")
     if args.complete:
         # cdash-complete for configure, build and test output.
         args.log_format = 'cdash-complete'
@@ -195,7 +196,7 @@ def test_suite(parser, args):
     else:
         import socket
         site = "--site=" + socket.gethostname()
-    sets = CombinatorialSpecSet(args.yamlFile)
+    sets = CombinatorialSpecSet(args.yaml_files)
     tests, dashboards = sets.readinFiles()
     # setting up tests for contretizing
     for spec in tests:
@@ -251,7 +252,7 @@ def test_suite(parser, args):
 class CombinatorialSpecSet:
 
     def __init__(self, files):
-        self.yamlFiles = files
+        self.yaml_files = files
 
     def combinatorial(self, item, versions):
         for version in versions:
@@ -273,7 +274,7 @@ class CombinatorialSpecSet:
         dashboards = []
         compiler_version = []
         schema = spack.schema.test.schema
-        for filename in self.yamlFiles:
+        for filename in self.yaml_files:
             # read yaml files which contains description of tests
             package_version = []
             tmp_compiler_ist = []
