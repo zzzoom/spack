@@ -48,11 +48,17 @@ description = "Installs packages, provides cdash output."
 
 def setup_parser(subparser):
     subparser.add_argument(
+<<<<<<< HEAD
         '--log-format',
         default=None,
         choices=['cdash', 'cdash-simple'],
         help="Format to be used for log files."
     )
+=======
+        '-c', '--complete', action='store_true', dest='complete',
+        help='Use "complete" CDash output format showing configure, '
+        'build, and test results')
+>>>>>>> 27e3337ccbd815fab44f39bf33212d6d6e9bccb4
     subparser.add_argument(
         '-s', '--site', action='store', dest='site',
         help='Location where testing occurred.')
@@ -63,7 +69,7 @@ def setup_parser(subparser):
         '-p', '--project', action='store', dest='project',
         help='project name on cdash')
     subparser.add_argument(
-        'yamlFile', nargs=argparse.REMAINDER,
+        'yaml_files', nargs=argparse.REMAINDER,
         help="Yaml test descriptions. Example found in spack docs.")
 
 
@@ -200,17 +206,30 @@ def test_suite(parser, args):
     project = ""
     """Compiles a list of tests from a yaml file.
     Runs Spec and concretize then produces cdash format."""
+<<<<<<< HEAD
     if not args.yamlFile:
         tty.die("spack testsuite requires a yaml file.")
     if not args.log_format:
         tty.die("spack testsuite requires a log format, cdash, cdash-simple")
     cdash = '--log-format=' + str(args.log_format)
     path = create_path()
+=======
+    if not args.yaml_files:
+        tty.die("spack test-suite requires at least one YAML file.")
+    if args.complete:
+        # cdash-complete for configure, build and test output.
+        args.log_format = 'cdash-complete'
+        cdash = '--log-format=cdash-complete'
+    else:
+        args.log_format = 'cdash-simple'
+        cdash = '--log-format=cdash-simple'
+>>>>>>> 27e3337ccbd815fab44f39bf33212d6d6e9bccb4
     if args.site:
         site = "--site=" + args.site
     else:
         import socket
         site = "--site=" + socket.gethostname()
+<<<<<<< HEAD
     for file in args.yamlFile:
         sets = CombinatorialSpecSet(file)
         test_contents = sets.read_in_file()
@@ -260,6 +279,37 @@ def test_suite(parser, args):
                     url.append(spackio_url + project)
         for dashboard in url:
             tty.msg("URL: " + str(dashboard))
+=======
+    sets = CombinatorialSpecSet(args.yaml_files)
+    tests, dashboards = sets.readinFiles()
+    # setting up tests for contretizing
+    for spec in tests:
+        tty.msg(spec)
+        if len(spack.store.db.query(spec)) != 0:
+            tty.msg(spack.store.db.query(spec))
+        # uninstall all packages before installing.
+        # This will reduce the number of skipped package installs.
+        if (len(spack.store.db.query(spec)) > 0):
+            spec, exception = uninstall_spec(spec)
+            if exception is "PackageStillNeededError":
+                continue
+        try:
+            spec, failure = install_spec(spec, cdash, site)
+        except Exception as e:
+            tty.die(e)
+            sys.exit(0)
+        if not failure:
+            tty.msg("Failure did not occur, uninstalling " + str(spec))
+            spec, exception = uninstall_spec(spec)
+    if args.cdash and args.project:
+        url = args.cdash + "/submit.php?project=" + args.project
+        dashboards.append(url)
+    elif args.project:
+        spackio_url += args.project
+        dashboards.append(spackio_url)
+    if len(dashboards) != 0:
+        for dashboard in dashboards:
+>>>>>>> 27e3337ccbd815fab44f39bf33212d6d6e9bccb4
             # allows for multiple dashboards
             # correct in future to be dynamic
             files = [name for name in glob.glob(os.path.join(path, '*.*'))
@@ -284,8 +334,13 @@ def test_suite(parser, args):
 
 class CombinatorialSpecSet:
 
+<<<<<<< HEAD
     def __init__(self, file):
         self.yaml_file = file
+=======
+    def __init__(self, files):
+        self.yaml_files = files
+>>>>>>> 27e3337ccbd815fab44f39bf33212d6d6e9bccb4
 
     def combinatorial(self, item, versions):
         for version in versions:
@@ -306,6 +361,7 @@ class CombinatorialSpecSet:
         tests = []
         compiler_version = []
         schema = spack.schema.test.schema
+<<<<<<< HEAD
         package_version = []
         tmp_compiler_ist = []
         test_contents = {}
@@ -326,6 +382,38 @@ class CombinatorialSpecSet:
                     if any(compiler.satisfies(str(cs))
                            for cs in spack.compilers.all_compiler_specs()):
                         compiler_version.append(compiler)
+=======
+        for filename in self.yaml_files:
+            # read yaml files which contains description of tests
+            package_version = []
+            tmp_compiler_ist = []
+            try:
+                tty.debug("Reading config file %s" % filename)
+                with open(filename) as f:
+                    data = _mark_overrides(syaml.load(f))
+                if data:
+                    validate_section(data, schema)
+                    packages = data['test-suite']['packages']
+                    compilers = data['test-suite']['compilers']
+                    for compiler in compilers:
+                        versions = compilers[compiler]['versions']
+                        [tmp_compiler_ist.append(Spec(spec))
+                            for spec in self.combinatorial(compiler, versions)]
+                    for compiler in tmp_compiler_ist:
+                        if any(compiler.satisfies(str(cs))
+                               for cs in spack.compilers.all_compiler_specs()):
+                            compiler_version.append(compiler)
+                        else:
+                            tty.warn("Spack could not find " + str(compiler))
+                    if 'include' in data['test-suite']:
+                        included_tests = data['test-suite']['include']
+                        for package in packages:
+                            if package in included_tests:
+                                versions = packages[package]['versions']
+                                [package_version.append(Spec(spec))
+                                    for spec in self.combinatorial(
+                                        package, versions)]
+>>>>>>> 27e3337ccbd815fab44f39bf33212d6d6e9bccb4
                     else:
                         tty.warn("Spack could not find " + str(compiler))
                 if 'include' in data['test-suite']:
