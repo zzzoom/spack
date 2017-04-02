@@ -41,11 +41,10 @@ source "$SPACK_ROOT/share/spack/setup-env.sh"
 spack compilers
 spack config get compilers
 
+# ensure siteconfig.py is included
+export PYTHONPATH="$(cd "`dirname "$0"`"; pwd):$PYTHONPATH"
+
 # Run unit tests with code coverage
-if [[ "$TRAVIS_PYTHON_VERSION" == 2.7 ]]; then
-    coverage run bin/spack install -v libdwarf
-    coverage run bin/spack test "$@" && coverage combine
-else
-    spack install -v libdwarf
-    spack test "$@"
-fi
+coverage run bin/spack install -v libdwarf \
+    && coverage run bin/spack test "$@" \
+    && coverage combine
