@@ -80,12 +80,24 @@ the dependencies"""
         '--log-format',
         default=None,
         choices=test_suites.keys(),
+<<<<<<< HEAD
         help="Format to be used for log files."
+=======
+        help="Format to be used for log files. Default is CDash."
+>>>>>>> wip
     )
     subparser.add_argument(
         '--log-file',
         default=None,
         help="filename for the log file. if not passed a default will be used"
+    )
+    subparser.add_argument(
+        '--site', action='store', type=str, default=None,
+        help="Location testing occurred."
+    )
+    subparser.add_argument(
+        '--path', action='store', type=str, default=None,
+        help="path of log file"
     )
 
 
@@ -112,7 +124,6 @@ def install(parser, args, **kwargs):
         'fake': args.fake,
         'dirty': args.dirty
     })
-
     # Spec from cli
     specs = spack.cmd.parse_specs(args.package, concretize=True)
     if len(specs) != 1:
@@ -120,31 +131,35 @@ def install(parser, args, **kwargs):
     spec = specs.pop()
 
     # Check if we were asked to produce some log for dashboards
-    if args.log_format is not None:
+    if args.log_format or args.log_file:
+        if not args.log_format:
+            args.log_format = 'cdash-simple'
+
         # Create the test suite in which to log results
-        test_suite = test_suites[args.log_format](spec, args.log_file)
+        if "cdash" in args.log_format:
+            test_suite = test_suites[args.log_format](
+                spec, args.log_file, args.site, args.path)
+        else:
+            test_suite = test_suites[args.log_format](
+                spec, args.log_file)
         # Decorate PackageBase.do_install to get installation status
         PackageBase.do_install = dashboard_output(
             spec, test_suite
         )(PackageBase.do_install)
+    # Do the actual installation
+    if args.things_to_install == 'dependencies':
+        # Install dependencies as-if they were installed
+        # for root (explicit=False in the DB)
+        kwargs['explicit'] = False
+        for s in spec.dependencies():
+            p = spack.repo.get(s)
+            p.do_install(**kwargs)
+    else:
+        package = spack.repo.get(spec)
+        kwargs['explicit'] = True
+        package.do_install(**kwargs)
 
-    try:
-        # Do the actual installation
-        if args.things_to_install == 'dependencies':
-            # Install dependencies as-if they were installed
-            # for root (explicit=False in the DB)
-            kwargs['explicit'] = False
-            for s in spec.dependencies():
-                p = spack.repo.get(s)
-                p.do_install(**kwargs)
-        else:
-            package = spack.repo.get(spec)
-            kwargs['explicit'] = True
-            package.do_install(**kwargs)
-    except Exception as err:
-        raise
     # Dump log file if asked to
     if args.log_format is not None:
         test_suite.dump()
-
 
