@@ -141,7 +141,6 @@ def validate_section(data, schema):
 
 def uninstall_spec(spec):
     try:
-        spec.concretize()
         tty.msg("uninstalling... " + str(spec))
         pkg = spack.repo.get(spec)
         pkg.do_uninstall()
@@ -149,12 +148,10 @@ def uninstall_spec(spec):
     except PackageStillNeededError as err:
         tty.msg(err)
         raise
-    return spec
 
 
 def install_spec(spec, cdash, site, path):
     try:
-        spec.concretize()
         tty.msg("installing... " + str(spec))
         parser = argparse.ArgumentParser()
         install.setup_parser(parser)
@@ -169,7 +166,6 @@ def install_spec(spec, cdash, site, path):
     except InstallError as err:
         tty.error(err)
         raise
-    return spec
 
 
 def create_path():
@@ -270,19 +266,20 @@ def test_suite(parser, args):
         for spec in test_contents['tests']:
             # uninstall all packages before installing.
             # This will reduce the number of skipped package installs.
+            spec.concretize()
             if spack.store.db.query(spec):
                 tty.msg(spack.store.db.query(spec))
                 try:
-                    spec = uninstall_spec(spec)
+                    uninstall_spec(spec)
                 except PackageStillNeededError as err:
                     tty.error(err)
                     pass
                 except:
                     pass
             try:
-                spec = install_spec(spec, cdash, site, patharg)
+                install_spec(spec, cdash, site, patharg)
                 try:
-                    spec = uninstall_spec(spec)
+                    uninstall_spec(spec)
                 except PackageStillNeededError as err:
                     tty.error(err)
                     pass
