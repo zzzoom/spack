@@ -30,6 +30,7 @@ import spack.cmd
 import spack.cmd.common.arguments as arguments
 from spack.hooks.dashboards import test_suites, dashboard_output
 from spack.package import PackageBase
+import os
 
 description = "build and install packages"
 
@@ -128,10 +129,12 @@ def install(parser, args, **kwargs):
     spec = specs.pop()
 
     # Check if we were asked to produce some log for dashboards
+    
     if args.log_format or args.log_file:
         if not args.log_format:
             args.log_format = 'cdash-simple'
-
+        if not args.path:
+            args.path = os.getcwd()
         # Create the test suite in which to log results
         if "cdash" in args.log_format:
             test_suite = test_suites[args.log_format](
@@ -159,4 +162,3 @@ def install(parser, args, **kwargs):
     # Dump log file if asked to
     if args.log_format is not None:
         test_suite.dump()
-

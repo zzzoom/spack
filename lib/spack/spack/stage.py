@@ -691,11 +691,14 @@ class StageError(spack.error.SpackError):
 class RestageError(StageError):
     """"Error encountered during restaging."""
 
+
 class OutofSpaceError(StageError):
     """Raised when no more disk space is available."""
 
+
 class ChdirError(StageError):
     """Raised when Spack can't change directories."""
+
 
 # Keep this in namespace for convenience
 FailedDownloadError = fs.FailedDownloadError

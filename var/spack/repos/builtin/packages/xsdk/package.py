@@ -37,35 +37,39 @@ class Xsdk(Package):
 
     # Dummy url since Spack complains if I don't list something, will be
     # removed when metapackage is available
-    url      = 'https://bitbucket.org/saws/saws/get/master.tar.gz'
+    url = 'https://bitbucket.org/saws/saws/get/master.tar.gz'
     version('develop', '941a541bdf625856be18c9752249146d')
     # this is for next planned release
     version('xsdk-0.2.0', '941a541bdf625856be18c9752249146d')
 
     depends_on('hypre@xsdk-0.2.0~internal-superlu', when='@xsdk-0.2.0')
-    depends_on('hypre@develop~internal-superlu', when='@develop')    
+    depends_on('hypre@develop~internal-superlu', when='@develop')
 
-    depends_on('superlu-dist@xsdk-0.2.0', when='@xsdk-0.2.0')    
-    depends_on('superlu-dist@develop', when='@develop')    
+    depends_on('superlu-dist@xsdk-0.2.0', when='@xsdk-0.2.0')
+    depends_on('superlu-dist@develop', when='@develop')
 
-    depends_on('trilinos@xsdk-0.2.0+hypre+superlu-dist+metis+hdf5~mumps+boost~suite-sparse~tpetra',
+    depends_on('trilinos@xsdk-0.2.0+hypre+superlu-dist+'
+               'metis+hdf5~mumps+boost~suite-sparse~tpetra',
                when='@xsdk-0.2.0')
-    depends_on('trilinos@develop+xsdkflags+hypre+superlu-dist+metis+hdf5~mumps+boost~suite-sparse~tpetra',
+    depends_on('trilinos@develop+xsdkflags+hypre+superlu-'
+               'dist+metis+hdf5~mumps+boost~suite-sparse~tpetra',
                when='@develop')
 
-    depends_on('petsc@xsdk-0.2.0+trilinos+mpi+hypre+superlu-dist+metis+hdf5~mumps~boost',
+    depends_on('petsc@xsdk-0.2.0+trilinos+mpi+hypre+superlu'
+               '-dist+metis+hdf5~mumps~boost',
                when='@xsdk-0.2.0')
-    depends_on('petsc@develop+trilinos+mpi+hypre+superlu-dist+metis+hdf5~mumps~boost',
+    depends_on('petsc@develop+trilinos+mpi+hypre+superlu'
+               '-dist+metis+hdf5~mumps~boost',
                when='@develop')
 
-    depends_on('pflotran@xsdk-0.2.0', when='@xsdk-0.2.0')    
+    depends_on('pflotran@xsdk-0.2.0', when='@xsdk-0.2.0')
     depends_on('pflotran@develop', when='@develop')
 
     depends_on('alquimia@xsdk-0.2.0', when='@xsdk-0.2.0')
-    depends_on('alquimia@develop', when='@develop')    
+    depends_on('alquimia@develop', when='@develop')
 
 #    depends_on('xsdktrilinos@xsdk-0.2.0', when='@xsdk-0.2.0')
-#    depends_on('xsdktrilinos@develop', when='@develop')    
+#    depends_on('xsdktrilinos@develop', when='@develop')
 
     variant('debug', default=False, description='Compile in debug mode')
 
