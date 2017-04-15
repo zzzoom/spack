@@ -24,6 +24,7 @@
 ##############################################################################
 import sys
 from spack import *
+from distutils.dir_util import copy_tree
 
 
 class Git(AutotoolsPackage):
@@ -41,6 +42,11 @@ class Git(AutotoolsPackage):
     #       https://www.kernel.org/pub/software/scm/git/git-manpages-{version}.tar.xz
 
     releases = [
+        {
+            'version': '2.12.1',
+            'md5': 'a05c614c80ecd41e50699f1562e1130c',
+            'md5_manpages': '8dfba0c9f51c6c23fb135d136c061c78',
+        },
         {
             'version': '2.12.0',
             'md5': '11a440ce0ed02098adf554c797facfd3',
@@ -160,6 +166,10 @@ class Git(AutotoolsPackage):
         if sys.platform == 'darwin':
             # Don't link with -lrt; the system has no (and needs no) librt
             filter_file(r' -lrt$', '', 'Makefile')
+
+    @run_after('install')
+    def install_completions(self):
+        copy_tree('contrib/completion', self.prefix.share)
 
     @run_after('install')
     def install_manpages(self):
