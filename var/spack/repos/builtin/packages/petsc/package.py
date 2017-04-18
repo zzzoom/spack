@@ -23,6 +23,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 ##############################################################################
 
+import sys
 import os
 from spack import *
 
@@ -37,7 +38,7 @@ class Petsc(Package):
     url = "http://ftp.mcs.anl.gov/pub/petsc/release-snapshots/petsc-3.5.3.tar.gz"
 
     version('develop', git='https://bitbucket.org/petsc/petsc.git', tag='master')
-    version('xsdk-0.2.0', git='https://bitbucket.org/petsc/petsc.git', tag='xsdk-0.2.0')
+    version('xsdk-0.2.0', git='https://bitbucket.org/petsc/petsc.git', tag='xsdk-0.2.0-rc2')
     version('for-pflotran-0.1.0', git='https://bitbucket.org/petsc/petsc.git',
             commit='7943f4e1472fff9cf1fc630a1100136616e4970f')
 
@@ -183,14 +184,9 @@ class Petsc(Package):
             '--with-blas-lapack-lib=%s' % lapack_blas.joined()
         ])
 
-<<<<<<< HEAD
         if 'trilinos' in spec:
             options.append('--with-cxx-dialect=C++11')
 	    
-        # Activates library support if needed
-        for library in ('metis', 'boost', 'hdf5', 'hypre', 'parmetis',
-                        'mumps', 'scalapack', 'trilinos'):
-=======
         # Help PETSc pick up Scalapack from MKL:
         if 'scalapack' in spec:
             scalapack = spec['scalapack'].libs
@@ -205,8 +201,7 @@ class Petsc(Package):
 
         # Activates library support if needed
         for library in ('metis', 'boost', 'hdf5', 'hypre', 'parmetis',
-                        'mumps'):
->>>>>>> wip
+                        'mumps', 'scalapack', 'trilinos'):
             options.append(
                 '--with-{library}={value}'.format(
                     library=library, value=('1' if library in spec else '0'))
@@ -281,3 +276,4 @@ class Petsc(Package):
         # Set up PETSC_DIR for everyone using PETSc package
         spack_env.set('PETSC_DIR', self.prefix)
         spack_env.unset('PETSC_ARCH')
+
