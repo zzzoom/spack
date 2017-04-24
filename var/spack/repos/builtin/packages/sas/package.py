@@ -25,20 +25,32 @@
 from spack import *
 
 
-class PyPygments(PythonPackage):
-    """Pygments is a syntax highlighting package written in Python."""
+class Sas(CMakePackage):
+    """SAS (Static Analysis Suite) is a powerful tool for running static
+    analysis on C++ code."""
 
-    homepage = "https://pypi.python.org/pypi/pygments"
-    url      = "https://pypi.io/packages/source/P/Pygments/Pygments-2.2.0.tar.gz"
+    homepage = "https://github.com/dpiparo/SAS"
+    url      = "https://github.com/dpiparo/SAS/archive/0.1.3.tar.gz"
 
-    import_modules = [
-        'pygments', 'pygments.filters', 'pygments.formatters',
-        'pygments.lexers', 'pygments.styles'
-    ]
+    version('0.2.0', 'e6fecfb71d9cdce342c8593f4728c9f0')
+    version('0.1.4', '20d7311258f2a59c9367ae1576c392b6')
+    version('0.1.3', '1e6572afcc03318d16d7321d40eec0fd')
 
-    version('2.2.0', '13037baca42f16917cbd5ad2fab50844')
-    version('2.1.3', 'ed3fba2467c8afcda4d317e4ef2c6150')
-    version('2.0.1', 'e0daf4c14a4fe5b630da765904de4d6c')
-    version('2.0.2', '238587a1370d62405edabd0794b3ec4a')
+    variant('debug', default=False, description='Build debug version')
 
-    depends_on('py-setuptools', type='build')
+    depends_on('python@2.7:')
+    depends_on('llvm@3.5:')
+    depends_on('cmake@2.8:', type='build')
+
+    def build_type(self):
+        spec = self.spec
+        if '+debug' in spec:
+            return 'Debug'
+        else:
+            return 'Release'
+
+    def cmake_args(self):
+        args = [
+            '-DLLVM_DEV_DIR=%s' % self.spec['llvm'].prefix
+        ]
+        return args

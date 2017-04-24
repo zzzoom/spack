@@ -25,20 +25,17 @@
 from spack import *
 
 
-class PyPygments(PythonPackage):
-    """Pygments is a syntax highlighting package written in Python."""
+class PySimplejson(PythonPackage):
+    """Simplejson is a simple, fast, extensible JSON encoder/decoder for
+    Python"""
 
-    homepage = "https://pypi.python.org/pypi/pygments"
-    url      = "https://pypi.io/packages/source/P/Pygments/Pygments-2.2.0.tar.gz"
+    homepage = "https://github.com/simplejson/simplejson"
+    url      = "https://pypi.io/packages/source/s/simplejson/simplejson-3.10.0.tar.gz"
 
-    import_modules = [
-        'pygments', 'pygments.filters', 'pygments.formatters',
-        'pygments.lexers', 'pygments.styles'
-    ]
-
-    version('2.2.0', '13037baca42f16917cbd5ad2fab50844')
-    version('2.1.3', 'ed3fba2467c8afcda4d317e4ef2c6150')
-    version('2.0.1', 'e0daf4c14a4fe5b630da765904de4d6c')
-    version('2.0.2', '238587a1370d62405edabd0794b3ec4a')
+    version('3.10.0', '426a9631d22851a7a970b1a677368b15')
+    version('3.9.0',  '01db2db1b96bd8e59bcab45bca12639b')
+    version('3.8.2',  '53b1371bbf883b129a12d594a97e9a18')
+    version('3.8.1',  'b8441f1053edd9dc335ded8c7f98a974')
+    version('3.8.0',  '72f3b93a6f9808df81535f79e79565a2')
 
     depends_on('py-setuptools', type='build')

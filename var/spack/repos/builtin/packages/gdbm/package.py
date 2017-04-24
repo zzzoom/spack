@@ -22,23 +22,25 @@
 # License along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 ##############################################################################
+#
 from spack import *
 
 
-class PyPygments(PythonPackage):
-    """Pygments is a syntax highlighting package written in Python."""
+class Gdbm(AutotoolsPackage):
+    """GNU dbm (or GDBM, for short) is a library of database functions
+    that use extensible hashing and work similar to the standard UNIX dbm.
+    These routines are provided to a programmer needing to create and
+    manipulate a hashed database."""
 
-    homepage = "https://pypi.python.org/pypi/pygments"
-    url      = "https://pypi.io/packages/source/P/Pygments/Pygments-2.2.0.tar.gz"
+    homepage = "http://www.gnu.org.ua/software/gdbm/gdbm.html"
+    url      = "ftp://ftp.gnu.org/gnu/gdbm/gdbm-1.13.tar.gz"
 
-    import_modules = [
-        'pygments', 'pygments.filters', 'pygments.formatters',
-        'pygments.lexers', 'pygments.styles'
-    ]
+    version('1.13',  '8929dcda2a8de3fd2367bdbf66769376')
+    version('1.12',  '9ce96ff4c99e74295ea19040931c8fb9')
+    version('1.11',  '72c832680cf0999caedbe5b265c8c1bd')
+    version('1.10',  '88770493c2559dc80b561293e39d3570')
+    version('1.9.1', '59f6e4c4193cb875964ffbe8aa384b58')
+    version('1.9',   '1f0e8e6691edd61bdd6b697b8c02528d')
 
-    version('2.2.0', '13037baca42f16917cbd5ad2fab50844')
-    version('2.1.3', 'ed3fba2467c8afcda4d317e4ef2c6150')
-    version('2.0.1', 'e0daf4c14a4fe5b630da765904de4d6c')
-    version('2.0.2', '238587a1370d62405edabd0794b3ec4a')
-
-    depends_on('py-setuptools', type='build')
+    def configure_args(self):
+        return ['--enable-libgdbm-compat']
