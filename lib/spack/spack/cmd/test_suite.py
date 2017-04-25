@@ -180,8 +180,8 @@ def test_suite(parser, args):
             sep_by_cmplrs = True
         if args.gt_system_compilers:
             use_system_compilers = True
-        if args.gt_type:
-            GenerateTests(use_system_compilers, sep_by_cmplrs, args.gt_type)
+        GenerateTests(use_system_compilers, sep_by_cmplrs, args.gt_type)
+        tty.msg("test files created.")
     else:
         if not args.yaml_files:
             tty.die("spack test-suite requires at least one argument")

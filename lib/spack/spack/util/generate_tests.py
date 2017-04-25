@@ -17,7 +17,6 @@ class GenerateTests(object):
 
     def __init__(self, use_system_compilers,
                  seperate_by_compiler, specific_test_type):
-        tty.msg(specific_test_type)
         if use_system_compilers:
             arch = ArchSpec(str(sarch.platform()),
                             'default_os', 'default_target')
