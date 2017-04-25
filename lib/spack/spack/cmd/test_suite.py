@@ -42,6 +42,7 @@ from spack.util.web import diagnose_curl_error
 from spack.util.spec_set import CombinatorialSpecSet
 from spack.package import PackageStillNeededError
 from spack.build_environment import InstallError
+from spack.util.generate_tests import GenerateTests
 
 description = "test installation of a suite of packages; generate cdash output"
 
@@ -64,6 +65,19 @@ def setup_parser(subparser):
     subparser.add_argument(
         '--dry-run', action='store_true',
         help='only print specs that would be installed')
+    subparser.add_argument(
+        '-gt', '--generate-tests', action='store_true',
+        help='generate tests')
+    subparser.add_argument(
+        '--gt-type', choices=['all-tests', 'days', 'xsdk'],
+        default='all-tests',
+        help='type of tests to generate. Default is all-tests')
+    subparser.add_argument(
+        '--gt-by-compiler', action='store_true',
+        help='Seperate file per compiler')
+    subparser.add_argument(
+        '--gt-system-compilers', action='store_true',
+        help='Use compilers found on system.')
     subparser.add_argument(
         'yaml_files', nargs=argparse.REMAINDER,
         help="YAML test suite files, or a directory of them")
@@ -159,99 +173,112 @@ def send_reports(dashboard, path):
 def test_suite(parser, args):
     """Compiles a list of tests from a yaml file.
     Runs Spec and concretize then produces cdash format."""
-    if not args.yaml_files:
-        tty.die("spack test-suite requires at least one argument")
-
-    # Figure out which inputs are YAML files, or glob them out of a
-    # directory if needed.
-    yaml_files = valid_yaml_files(args.yaml_files)
-    if not yaml_files:
-        tty.die("no input files were valid")
-
-    # Make spec sets out of each file.  This validates the schemas in
-    # advance of building anything, so that we fail fast.
-    spec_sets = []
-    for yfile in yaml_files:
-        with open(yfile) as f:
-            spec_sets.append(CombinatorialSpecSet(f))
-
-    log_format = '--log-format=' + str(args.log_format)
-
-    path = create_output_directory()
-    patharg = "--path=" + str(path)
-    if args.site:
-        site = "--site=" + args.site
+    if args.generate_tests:
+        sep_by_cmplrs = False
+        use_system_compilers = False
+        if args.gt_by_compiler:
+            sep_by_cmplrs = True
+        if args.gt_system_compilers:
+            use_system_compilers = True
+        if args.gt_type:
+            GenerateTests(use_system_compilers, sep_by_cmplrs, args.gt_type)
     else:
-        import socket
-        site = "--site=" + socket.gethostname()
+        if not args.yaml_files:
+            tty.die("spack test-suite requires at least one argument")
 
-    def warn(err):
-        """print a warning, and stacktrace if we're in debug mode (spack -d)"""
-        tty.warn(err)
-        if spack.debug:
-            print(traceback.format_exc())
+        # Figure out which inputs are YAML files, or glob them out of a
+        # directory if needed.
+        yaml_files = valid_yaml_files(args.yaml_files)
+        if not yaml_files:
+            tty.die("no input files were valid")
 
-    # iterate over specs from each YAML file.
-    for i, spec_set in enumerate(spec_sets):
-        for spec in spec_set:
-            if not spec.name:
-                tty.warn(
-                    "%s defines an unconcretizable spec set." % yaml_files[i],
-                    "Got anonymous spec: " + str(spec))
-                continue
+        # Make spec sets out of each file.  This validates the schemas in
+        # advance of building anything, so that we fail fast.
+        spec_sets = []
+        for yfile in yaml_files:
+            with open(yfile) as f:
+                spec_sets.append(CombinatorialSpecSet(f))
 
-            try:
-                concrete = spec.concretized()
+        log_format = '--log-format=' + str(args.log_format)
 
-                # if we're doing a dry run, just print the concrete spec
-                if args.dry_run:
-                    print(concrete.tree(color=sys.stdout.isatty()))
+        path = create_output_directory()
+        patharg = "--path=" + str(path)
+        if args.site:
+            site = "--site=" + args.site
+        else:
+            import socket
+            site = "--site=" + socket.gethostname()
+
+        def warn(err):
+            """print a warning, and stacktrace if we're 
+            in debug mode (spack -d)"""
+            tty.warn(err)
+            if spack.debug:
+                print(traceback.format_exc())
+
+        # iterate over specs from each YAML file.
+        for i, spec_set in enumerate(spec_sets):
+            for spec in spec_set:
+                if not spec.name:
+                    tty.warn(
+                        "%s defines an unconcretizable spec set." % yaml_files[
+                            i],
+                        "Got anonymous spec: " + str(spec))
                     continue
 
-            except KeyboardInterrupt:
-                raise
-            except Exception as e:
-                tty.warn('Concretize failed, moving on.')
-                warn(e)
-                continue
-
-            # if the spec is already installed, uninstall it before
-            # trying to install.
-            # TODO: this is destructive; consider a separate sandbox root.
-            if spack.store.db.query(spec):
-                tty.msg(spack.store.db.query(spec))
                 try:
-                    uninstall_spec(spec)
+                    concrete = spec.concretized()
 
-                except PackageStillNeededError as err:
-                    tty.warn('Package still needed, cant uninstall.')
-                    warn(err)
-                    continue   # note: this skips the install.
+                    # if we're doing a dry run, just print the concrete spec
+                    if args.dry_run:
+                        print(concrete.tree(color=sys.stdout.isatty()))
+                        continue
+
                 except KeyboardInterrupt:
                     raise
                 except Exception as e:
-                    tty.warn('Unexpected error.')
+                    tty.warn('Concretize failed, moving on.')
                     warn(e)
+                    continue
 
-            # do the actual install
-            try:
-                install_spec(spec, log_format, site, patharg)
-                uninstall_spec(spec)
+                # if the spec is already installed, uninstall it before
+                # trying to install.
+                # TODO: this is destructive; consider a separate sandbox root.
+                if spack.store.db.query(spec):
+                    tty.msg(spack.store.db.query(spec))
+                    try:
+                        uninstall_spec(spec)
 
-            except KeyboardInterrupt:
-                raise
-            except Exception as e:
-                tty.warn('Install hit exception, moving on.')
-                warn(e)
-                continue
+                    except PackageStillNeededError as err:
+                        tty.warn('Package still needed, cant uninstall.')
+                        warn(err)
+                        continue   # note: this skips the install.
+                    except KeyboardInterrupt:
+                        raise
+                    except Exception as e:
+                        tty.warn('Unexpected error.')
+                        warn(e)
 
-        # Set cdash and project form command, then yaml file, then default.
-        cdash = args.cdash or spec_set.cdash or ['https://spack.io/cdash']
-        if not isinstance(cdash, list):
-            cdash = [cdash]
-        project = args.project or spec_set.project or 'spack'
+                # do the actual install
+                try:
+                    install_spec(spec, log_format, site, patharg)
+                    uninstall_spec(spec)
 
-        # Send results to each dashboard.
-        urls = ['{0}/submit.php?project={1}'.format(c, project) for c in cdash]
-        for dashboard in urls:
-            send_reports(dashboard, path)
+                except KeyboardInterrupt:
+                    raise
+                except Exception as e:
+                    tty.warn('Install hit exception, moving on.')
+                    warn(e)
+                    continue
+
+            # Set cdash and project form command, then yaml file, then default.
+            cdash = args.cdash or spec_set.cdash or ['https://spack.io/cdash']
+            if not isinstance(cdash, list):
+                cdash = [cdash]
+            project = args.project or spec_set.project or 'spack'
+
+            # Send results to each dashboard.
+            urls = [
+                '{0}/submit.php?project={1}'.format(c, project) for c in cdash]
+            for dashboard in urls:
+                send_reports(dashboard, path)
