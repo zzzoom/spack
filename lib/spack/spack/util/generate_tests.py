@@ -47,10 +47,10 @@ class GenerateTests(object):
             cmplr_name = cmpr.split('@')[0]
             cmplr_version = cmpr.split('@')[1]
             if cmplr_name not in rtn_dict.keys():
-                rtn_dict[cmplr_name] = {'version:': []}
-                rtn_dict[cmplr_name]['version:'].append(cmplr_version)
+                rtn_dict[cmplr_name] = {'versions': []}
+                rtn_dict[cmplr_name]['versions'].append(cmplr_version)
             else:
-                rtn_dict[cmplr_name]['version:'].append(cmplr_version)
+                rtn_dict[cmplr_name]['versions'].append(cmplr_version)
         return rtn_dict
 
     def generate_all_tests(self):
