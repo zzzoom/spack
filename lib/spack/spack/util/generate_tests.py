@@ -97,7 +97,8 @@ class GenerateTests(object):
             if self.seperate_by_compiler:
                 for compiler in self.compilers:
                     path = os.path.join(os.getcwd(), "day" +
-                                        str(day) + "_" + str(compiler) + ".yaml")
+                                        str(day) + "_" + str(compiler) +
+                                        ".yaml")
                     rm_list = []
                     day_list = []
                     for x in range(num_pkgs / 7):

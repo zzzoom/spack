@@ -29,6 +29,7 @@ import spack.package
 import glob
 import argparse
 import datetime
+import operator
 
 import llnl.util.tty as tty
 
@@ -170,6 +171,30 @@ def send_reports(dashboard, path):
                      diagnose_curl_error(return_code))
 
 
+def get_spec_length(spec):
+    return spec.tree().count('^')
+
+
+def sort_list_largest_first(spec_sets):
+    spec_dict = {}
+    return_list = []
+    for i, spec_set in enumerate(spec_sets):
+        for spec in spec_set:
+            try:
+                spec_dict[spec] = 0
+                concrete = spec.concretized()
+                spec_dict[spec] = get_spec_length(concrete)
+            except KeyboardInterrupt:
+                raise
+            except Exception as e:
+                tty.warn('Concretize failed, moving on.')
+                continue
+        sorted_list = sorted(spec_dict.items(), key=operator.itemgetter(1),
+                             reverse=True)
+        [return_list.append(spec[0]) for spec in sorted_list]
+        return return_list
+
+
 def test_suite(parser, args):
     """Compiles a list of tests from a yaml file.
     Runs Spec and concretize then produces cdash format."""
@@ -215,61 +240,60 @@ def test_suite(parser, args):
             tty.warn(err)
             if spack.debug:
                 print(traceback.format_exc())
-
+        spec_set = sort_list_largest_first(spec_sets)
         # iterate over specs from each YAML file.
-        for i, spec_set in enumerate(spec_sets):
-            for spec in spec_set:
-                if not spec.name:
-                    tty.warn(
-                        "%s defines an unconcretizable spec set." % yaml_files[
-                            i],
-                        "Got anonymous spec: " + str(spec))
+        for spec in spec_set:
+            if not spec.name:
+                tty.warn(
+                    "%s defines an unconcretizable spec set." % yaml_files[
+                        i],
+                    "Got anonymous spec: " + str(spec))
+                continue
+
+            try:
+                concrete = spec.concretized()
+
+                # if we're doing a dry run, just print the concrete spec
+                if args.dry_run:
+                    print(concrete.tree(color=sys.stdout.isatty()))
                     continue
 
+            except KeyboardInterrupt:
+                raise
+            except Exception as e:
+                tty.warn('Concretize failed, moving on.')
+                warn(e)
+                continue
+
+            # if the spec is already installed, uninstall it before
+            # trying to install.
+            # TODO: this is destructive; consider a separate sandbox root.
+            if spack.store.db.query(spec):
+                tty.msg(spack.store.db.query(spec))
                 try:
-                    concrete = spec.concretized()
-
-                    # if we're doing a dry run, just print the concrete spec
-                    if args.dry_run:
-                        print(concrete.tree(color=sys.stdout.isatty()))
-                        continue
-
-                except KeyboardInterrupt:
-                    raise
-                except Exception as e:
-                    tty.warn('Concretize failed, moving on.')
-                    warn(e)
-                    continue
-
-                # if the spec is already installed, uninstall it before
-                # trying to install.
-                # TODO: this is destructive; consider a separate sandbox root.
-                if spack.store.db.query(spec):
-                    tty.msg(spack.store.db.query(spec))
-                    try:
-                        uninstall_spec(spec)
-
-                    except PackageStillNeededError as err:
-                        tty.warn('Package still needed, cant uninstall.')
-                        warn(err)
-                        continue   # note: this skips the install.
-                    except KeyboardInterrupt:
-                        raise
-                    except Exception as e:
-                        tty.warn('Unexpected error.')
-                        warn(e)
-
-                # do the actual install
-                try:
-                    install_spec(spec, log_format, site, patharg)
                     uninstall_spec(spec)
 
+                except PackageStillNeededError as err:
+                    tty.warn('Package still needed, cant uninstall.')
+                    warn(err)
+                    continue   # note: this skips the install.
                 except KeyboardInterrupt:
                     raise
                 except Exception as e:
-                    tty.warn('Install hit exception, moving on.')
+                    tty.warn('Unexpected error.')
                     warn(e)
-                    continue
+
+            # do the actual install
+            try:
+                install_spec(spec, log_format, site, patharg)
+                uninstall_spec(spec)
+
+            except KeyboardInterrupt:
+                raise
+            except Exception as e:
+                tty.warn('Install hit exception, moving on.')
+                warn(e)
+                continue
 
             # Set cdash and project form command, then yaml file, then default.
             cdash = args.cdash or spec_set.cdash or ['https://spack.io/cdash']
