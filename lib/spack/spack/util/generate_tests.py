@@ -23,8 +23,10 @@ class GenerateTests(object):
             self.compilers = [
                 c.spec for c in spack.compilers.compilers_for_arch(arch)]
         else:
-            self.compilers = ['gcc@4.4.7', 'gcc@4.7.4',
-                              'gcc@4.8.5', 'gcc@4.8', 'gcc@4.9.3', 'gcc@5.4.0']
+            self.compilers = ['gcc@4.4.7', 'gcc@4.7', 'gcc@4.8.5',
+                              'gcc@4.8', 'gcc@4.9.3', 'gcc@5.4.0',
+                              'clang@3.8.0-2ubuntu4',  'clang@3.7.1-2ubuntu2',
+                              'clang@3.6.2-3ubuntu2', 'clang@3.5.2-3ubuntu1']
 
         self.xsdk = ['xsdk', 'xsdktrilinos', 'trilinos', 'superlu-mt',
                      'superlu-dist', 'petsc', 'superlu', 'hypre', 'alquimia']
@@ -97,7 +99,7 @@ class GenerateTests(object):
             if self.seperate_by_compiler:
                 for compiler in self.compilers:
                     path = os.path.join(os.getcwd(), "day" +
-                                        str(day) + "_" + str(compiler) +
+                                        str(day) + "_" + str(compiler).replace('@', '') +
                                         ".yaml")
                     rm_list = []
                     day_list = []
@@ -126,7 +128,7 @@ class GenerateTests(object):
         if self.seperate_by_compiler:
             for compiler in self.compilers:
                 path = os.path.join(os.getcwd(), "all_" +
-                                    str(compiler) + ".yaml")
+                                    str(compiler).replace('@', '') + ".yaml")
                 self.write_file(path, all_pkgs, [str(compiler)])
         else:
             path = os.path.join(os.getcwd(), "all.yaml")
@@ -137,7 +139,7 @@ class GenerateTests(object):
         if self.seperate_by_compiler:
             for compiler in self.compilers:
                 path = os.path.join(os.getcwd(), "xsdk_" +
-                                    str(compiler) + ".yaml")
+                                    str(compiler).replace('@', '') + ".yaml")
                 self.write_file(path, self.xsdk, [str(compiler)])
         else:
             path = os.path.join(os.getcwd(), "xsdk.yaml")
