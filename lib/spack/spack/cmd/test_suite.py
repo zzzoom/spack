@@ -240,7 +240,9 @@ def test_suite(parser, args):
             tty.warn(err)
             if spack.debug:
                 print(traceback.format_exc())
+        tty.msg("sorting test to help with performance.")        
         spec_set = sort_list_largest_first(spec_sets)
+        tty.msg("sorting completed.... Running tests.")     
         # iterate over specs from each YAML file.
         for spec in spec_set:
             if not spec.name:
