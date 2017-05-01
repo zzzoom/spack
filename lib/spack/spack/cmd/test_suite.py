@@ -80,6 +80,9 @@ def setup_parser(subparser):
         '--gt-system-compilers', action='store_true',
         help='Use compilers found on system.')
     subparser.add_argument(
+        '-p', '--performance', action='store_true',
+        help='sorts specs for better performance')
+    subparser.add_argument(
         'yaml_files', nargs=argparse.REMAINDER,
         help="YAML test suite files, or a directory of them")
 
@@ -175,24 +178,29 @@ def get_spec_length(spec):
     return spec.tree().count('^')
 
 
-def sort_list_largest_first(spec_sets):
+def sort_list_largest_first(spec_sets, args):
     spec_dict = {}
     return_list = []
     for i, spec_set in enumerate(spec_sets):
-        for spec in spec_set:
-            try:
-                spec_dict[spec] = 0
-                concrete = spec.concretized()
-                spec_dict[spec] = get_spec_length(concrete)
-            except KeyboardInterrupt:
-                raise
-            except Exception as e:
-                tty.warn('Concretize failed, moving on.')
-                continue
-        sorted_list = sorted(spec_dict.items(), key=operator.itemgetter(1),
-                             reverse=True)
-        [return_list.append(spec[0]) for spec in sorted_list]
-        return return_list
+        if args.performance:
+            tty.msg("sorting test to help with performance.")
+            for spec in spec_set:
+                try:
+                    spec_dict[spec] = 0
+                    concrete = spec.concretized()
+                    spec_dict[spec] = get_spec_length(concrete)
+                except KeyboardInterrupt:
+                    raise
+                except Exception as e:
+                    tty.warn('Concretize failed, moving on.')
+                    continue
+            sorted_list = sorted(spec_dict.items(), key=operator.itemgetter(1),
+                                 reverse=True)
+            [return_list.append(spec[0]) for spec in sorted_list]
+            tty.msg("sorting completed.... Running tests.")
+            return return_list
+        else:
+            return spec_set
 
 
 def test_suite(parser, args):
@@ -240,9 +248,8 @@ def test_suite(parser, args):
             tty.warn(err)
             if spack.debug:
                 print(traceback.format_exc())
-        tty.msg("sorting test to help with performance.")        
-        spec_set = sort_list_largest_first(spec_sets)
-        tty.msg("sorting completed.... Running tests.")     
+
+        spec_set = sort_list_largest_first(spec_sets, args)
         # iterate over specs from each YAML file.
         for spec in spec_set:
             if not spec.name:
