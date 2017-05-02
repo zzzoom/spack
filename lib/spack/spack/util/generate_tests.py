@@ -23,11 +23,14 @@ class GenerateTests(object):
             self.compilers = [
                 c.spec for c in spack.compilers.compilers_for_arch(arch)]
         else:
-            self.compilers = ['gcc@4.4.7', 'gcc@4.7', 'gcc@4.8.5',
+            """self.compilers = ['gcc@4.4.7', 'gcc@4.7', 'gcc@4.8.5',
                               'gcc@4.8', 'gcc@4.9.3', 'gcc@5.4.0', 'clang@3.4.2',
                               'clang@3.8.0-2ubuntu4',  'clang@3.7.1-2ubuntu2',
-                              'clang@3.6.2-3ubuntu2', 'clang@3.5.2-3ubuntu1']
-
+                              'clang@3.6.2-3ubuntu2', 'clang@3.5.2-3ubuntu1']"""
+            self.compilers = ['gcc@4.4.7', 'gcc@4.7', 'gcc@4.8.5',
+                              'gcc@4.8', 'gcc@4.9.3', 'gcc@5.4.0',
+                              'clang@3.4.2', 'clang@3.8',  'clang@3.7',
+                              'clang@3.6', 'clang@3.5']
         self.xsdk = ['xsdk', 'xsdktrilinos', 'trilinos', 'superlu-mt',
                      'superlu-dist', 'petsc', 'superlu', 'hypre', 'alquimia']
 

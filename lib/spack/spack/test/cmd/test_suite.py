@@ -25,7 +25,7 @@
 import os
 import datetime
 
-from spack.cmd.test_suite import create_output_directory, valid_yaml_files
+from spack.util.sandboxtestsuite import create_output_directory, valid_yaml_files
 from spack.stage import Stage
 
 
