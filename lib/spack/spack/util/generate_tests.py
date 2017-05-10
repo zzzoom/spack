@@ -16,7 +16,8 @@ description = "Generates a test files{days, all, xsdk}"
 class GenerateTests(object):
 
     def __init__(self, use_system_compilers,
-                 seperate_by_compiler, specific_test_type):
+                 seperate_by_compiler, specific_test_type, latest_pkgs):
+        self.latest_pkgs = latest_pkgs
         if use_system_compilers:
             arch = ArchSpec(str(sarch.platform()),
                             'default_os', 'default_target')
@@ -26,11 +27,16 @@ class GenerateTests(object):
             """self.compilers = ['gcc@4.4.7', 'gcc@4.7', 'gcc@4.8.5',
                               'gcc@4.8', 'gcc@4.9.3', 'gcc@5.4.0', 'clang@3.4.2',
                               'clang@3.8.0-2ubuntu4',  'clang@3.7.1-2ubuntu2',
-                              'clang@3.6.2-3ubuntu2', 'clang@3.5.2-3ubuntu1']"""
+                              'clang@3.6.2-3ubuntu2', 'clang@3.5.2-3ubuntu1']
+            #correct one
             self.compilers = ['gcc@4.4.7', 'gcc@4.7', 'gcc@4.8.5',
                               'gcc@4.8', 'gcc@4.9.3', 'gcc@5.4.0',
                               'clang@3.4.2', 'clang@3.8',  'clang@3.7',
-                              'clang@3.6', 'clang@3.5']
+                              'clang@3.6', 'clang@3.5']"""
+            # reduced set
+            self.compilers = ['gcc@4.4.7', 'gcc@4.8.5',
+                              'gcc@4.9.3', 'gcc@5.4.0',
+                              'clang@3.4.2', 'clang@3.8.0-2ubuntu4']
         self.xsdk = ['xsdk', 'xsdktrilinos', 'trilinos', 'superlu-mt',
                      'superlu-dist', 'petsc', 'superlu', 'hypre', 'alquimia']
 
@@ -66,9 +72,8 @@ class GenerateTests(object):
 
     def write_file(self, path, pkgs, compilers):
         with open(path, 'w') as f:
-            sys.stdout = f
-            print yaml.dump(self.file_output(pkgs, compilers),
-                            default_flow_style=False)
+            yaml.dump(self.file_output(pkgs, compilers), f,
+                      default_flow_style=False)
 
     def generate_all_tests(self):
         self.generate_days()
@@ -83,8 +88,15 @@ class GenerateTests(object):
             # Fill in the entries one by one
             pkg_details = spack.repo.get(sub_pkg)
             version_list = []
-            for version in pkg_details.versions:
-                version_list.append(str(version))
+            sorted_by_version = sorted(pkg_details.versions, reverse=True)
+            if self.latest_pkgs:
+                try:
+                    version_list.append(str(sorted_by_version[0]))
+                except IndexError as err:
+                    continue
+            else:
+                for version in sorted(pkg_details.versions, reverse=True):
+                    version_list.append(str(version))
             pkgs[sub_pkg] = {'versions': version_list}
         for rm_pkg in rm_list:
             tmp_pkg_list.remove(rm_pkg)
