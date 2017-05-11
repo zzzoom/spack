@@ -1,13 +1,11 @@
 import spack
-import argparse
-import sys
 import os
 import spack.architecture as sarch
 import spack.util.spack_yaml as yaml
-import llnl.util.tty as tty
+# import llnl.util.tty as tty
 
 from random import randint
-from spack.spec import Spec, ArchSpec
+from spack.spec import ArchSpec
 
 
 description = "Generates a test files{days, all, xsdk}"
@@ -24,15 +22,10 @@ class GenerateTests(object):
             self.compilers = [
                 c.spec for c in spack.compilers.compilers_for_arch(arch)]
         else:
-            """self.compilers = ['gcc@4.4.7', 'gcc@4.7', 'gcc@4.8.5',
-                              'gcc@4.8', 'gcc@4.9.3', 'gcc@5.4.0', 'clang@3.4.2',
-                              'clang@3.8.0-2ubuntu4',  'clang@3.7.1-2ubuntu2',
-                              'clang@3.6.2-3ubuntu2', 'clang@3.5.2-3ubuntu1']
-            #correct one
-            self.compilers = ['gcc@4.4.7', 'gcc@4.7', 'gcc@4.8.5',
-                              'gcc@4.8', 'gcc@4.9.3', 'gcc@5.4.0',
-                              'clang@3.4.2', 'clang@3.8',  'clang@3.7',
-                              'clang@3.6', 'clang@3.5']"""
+            # self.compilers = ['gcc@4.4.7', 'gcc@4.7', 'gcc@4.8.5',
+            #                  'gcc@4.8', 'gcc@4.9.3', 'gcc@5.4.0',
+            #                  'clang@3.4.2', 'clang@3.8',  'clang@3.7',
+            #                  'clang@3.6', 'clang@3.5']"""
             # reduced set
             self.compilers = ['gcc@4.4.7', 'gcc@4.8.5',
                               'gcc@4.9.3', 'gcc@5.4.0',
@@ -91,7 +84,10 @@ class GenerateTests(object):
             sorted_by_version = sorted(pkg_details.versions, reverse=True)
             if self.latest_pkgs:
                 try:
-                    version_list.append(str(sorted_by_version[0]))
+                    if 'develop' in str(sorted_by_version[0]):
+                        version_list.append(str(sorted_by_version[1]))
+                    else:
+                        version_list.append(str(sorted_by_version[0]))
                 except IndexError as err:
                     continue
             else:
@@ -114,7 +110,8 @@ class GenerateTests(object):
             if self.seperate_by_compiler:
                 for compiler in self.compilers:
                     path = os.path.join(os.getcwd(), "day" +
-                                        str(day) + "_" + str(compiler).replace('@', '') +
+                                        str(day) + "_" +
+                                        str(compiler).replace('@', '') +
                                         ".yaml")
                     rm_list = []
                     day_list = []
@@ -150,7 +147,6 @@ class GenerateTests(object):
             self.write_file(path, all_pkgs, self.compilers)
 
     def generate_xsdk(self):
-        xsdk_pkgs = self.xsdk
         if self.seperate_by_compiler:
             for compiler in self.compilers:
                 path = os.path.join(os.getcwd(), "xsdk_" +

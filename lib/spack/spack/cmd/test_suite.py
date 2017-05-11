@@ -34,7 +34,6 @@ import spack
 import spack.cmd.compiler
 import spack.compilers
 import spack.error
-import pytest
 import time
 import shutil
 
@@ -52,12 +51,6 @@ from spack.util.generate_tests import GenerateTests
 from spack.database import Database
 from spack.directory_layout import YamlDirectoryLayout
 from contextlib import contextmanager
-
-#use database to make sandbox
-#snapshot database and perform changes using the test-suite
-#once these are do restore database
-
-
 
 
 description = "test installation of a suite of packages; generate cdash output"
@@ -113,8 +106,10 @@ def setup_parser(subparser):
         'yaml_files', nargs=argparse.REMAINDER,
         help="YAML test suite files, or a directory of them")
 
+
 # used for redundant builds
 dict_pkgs = {}
+
 
 def update_dict(pkg):
     global dict_pkgs
@@ -122,6 +117,7 @@ def update_dict(pkg):
         dict_pkgs[pkg] += 1
     else:
         dict_pkgs[pkg] = 1
+
 
 def find_multiples():
     pkgs = {}
@@ -163,7 +159,6 @@ def uninstall_spec(spec):
 
 def install_spec(spec, cdash, site, path, redundant=False):
     try:
-        #tty.msg("installing... " + str(spec))
         parser = argparse.ArgumentParser()
         install_setup_parser(parser)
         if redundant:
@@ -273,9 +268,11 @@ def sort_list_largest_first(spec_sets, args):
         else:
             return spec_set
 
+
 @contextmanager
-def setup_fake_db(tmp_db):
+def setup_test_db(tmp_db):
     """create fake install directory and a fake db into Spack."""
+    tty.msg("Creating mock database for building.")
     layout = spack.store.layout
     db = spack.store.db
     # Use a fake install directory to avoid conflicts bt/w
@@ -287,15 +284,14 @@ def setup_fake_db(tmp_db):
     # Restore Spack's layout.
     spack.store.layout = layout
     spack.store.db = db
+    tty.msg("Restoring user database.")
 
 
 def test_suite(parser, args):
     """Compiles a list of tests from a yaml file.
     Runs Spec and concretize then produces cdash format."""
     # pytest.ini lives in the root of the spack repository.
-    all_specs = spack.store.db.query(installed=any)
-    tty.msg(all_specs)
-    with setup_fake_db(os.getcwd() + "test_db"):
+    with setup_test_db(os.getcwd() + "test_db"):
         if args.time:
             start = time.time()
         if args.generate_tests:
@@ -327,9 +323,7 @@ def test_suite(parser, args):
             for yfile in yaml_files:
                 with open(yfile) as f:
                     spec_sets.append(CombinatorialSpecSet(f))
-
             log_format = '--log-format=' + str(args.log_format)
-
             path = create_output_directory()
             patharg = "--path=" + str(path)
             if args.site:
@@ -339,7 +333,7 @@ def test_suite(parser, args):
                 site = "--site=" + socket.gethostname()
 
             def warn(err):
-                """print a warning, and stacktrace if we're 
+                """print a warning, and stacktrace if we're
                 in debug mode (spack -d)"""
                 tty.warn(err)
                 if spack.debug:
@@ -352,17 +346,15 @@ def test_suite(parser, args):
             cdash = args.cdash or ['https://spack.io/cdash']
             if not isinstance(cdash, list):
                 cdash = [cdash]
-            project = args.project or spec_set.project or 'spack'
+            project = args.project or 'spack'
 
             # Send results to each dashboard.
             if not spec_set.cdash:
                 urls = [
-                    '{0}/submit.php?project={1}'.format(c, project) for c in cdash]
+                    '{0}/submit.php?project={1}'.format(c, project)
+                    for c in cdash]
             else:
                 urls = spec_set.cdash
-            # for dashboard in urls:
-            #    tty.msg("Sending reports to " + str(dashboard))
-
             # iterate over specs from each YAML file.
             for spec in spec_set:
                 if args.time:
@@ -374,9 +366,7 @@ def test_suite(parser, args):
                         "Got anonymous spec: " + str(spec))
                     continue
                 try:
-
                     concrete = spec.concretized()
-
                     # if we're doing a dry run, just print the concrete spec
                     if args.dry_run:
                         print(concrete.tree(color=sys.stdout.isatty()))
@@ -387,26 +377,6 @@ def test_suite(parser, args):
                     tty.warn('Concretize failed, moving on.')
                     warn(e)
                     continue
-
-                # if the spec is already installed, uninstall it before
-                # trying to install.
-                # TODO: this is destructive; consider a separate sandbox root.
-                '''
-                if args.uninstall_after:
-                    if spack.store.db.query(spec):
-                        tty.msg(spack.store.db.query(spec))
-                    try:
-                        uninstall_spec(spec)
-                    except PackageStillNeededError as err:
-                        tty.warn('Package still needed, cant uninstall.')
-                        warn(err)
-                        continue   # note: this skips the install.
-                    except KeyboardInterrupt:
-                        raise
-                    except Exception as e:
-                        tty.warn('Unexpected error.')
-                        warn(e)
-                '''
                 # do the actual install
                 try:
                     install_spec(spec, log_format, site,
@@ -427,14 +397,12 @@ def test_suite(parser, args):
                 if args.time:
                     tty.msg(str(spec.name) + "@" + str(spec.version) +
                             " Build time:  " + _hms(time.time() - build_start))
-                # for dashboard in urls:
-                #    send_reports(dashboard, path)
+                for dashboard in urls:
+                    send_reports(dashboard, path)
+
             if args.time:
                 tty.msg("Total build time : " + _hms(time.time() - start))
 
             if args.redundant_installs:
                 find_multiples()
                 uninstall_all_specs()
-
-
-

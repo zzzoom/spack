@@ -70,7 +70,6 @@ from spack.util.crypto import bit_length
 from spack.util.environment import dump_environment
 from spack.version import *
 
- 
 
 """Allowed URL schemes for spack packages."""
 _ALLOWED_URL_SCHEMES = ["http", "https", "ftp", "file", "git"]
@@ -1198,7 +1197,9 @@ class PackageBase(with_metaclass(PackageMeta, object)):
 
         tty.msg("Installing %s" % self.name)
         if redundant:
-            spack.cmd.test_suite.update_dict(str(self.name)+"@"+str(self.version)+"%"+str(self.spec.compiler))
+            spack.cmd.test_suite.update_dict(
+                str(self.name) + "@" + str(self.version) +
+                "%" + str(self.spec.compiler))
         # First, install dependencies recursively.
         if install_deps:
             for dep in self.spec.dependencies():

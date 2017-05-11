@@ -234,8 +234,8 @@ class CDashSimpleTestSuite(object):
             test_element = ET.SubElement(testlist, "Test")
             test_element.text = item.name
             build.append(item.element)
-        #log_element = ET.SubElement(build, 'Log')
-        #log_element.set('Encoding', 'base64')
+        # log_element = ET.SubElement(build, 'Log')
+        # log_element.set('Encoding', 'base64')
         for item in self.tests:
             if item.result_type != TestResult.SKIPPED:
                 build.append(item.element)
