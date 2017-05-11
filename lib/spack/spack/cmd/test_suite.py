@@ -339,24 +339,23 @@ def test_suite(parser, args):
                 if spack.debug:
                     print(traceback.format_exc())
 
-            spec_set, spec_set_cdash, spec_set_project = sort_list_largest_first(
+            spec_set, spec_cdash, spec_project = sort_list_largest_first(
                 spec_sets, args)
 
             # Set cdash and project form command, then yaml file, then
             # default.
-            cdash = args.cdash or spec_set_cdash or ['https://spack.io/cdash']
+            cdash = args.cdash or spec_cdash or ['https://spack.io/cdash']
             if not isinstance(cdash, list):
                 cdash = [cdash]
-            project = args.project or spec_set_project or 'spack'
+            project = args.project or spec_project or 'spack'
 
             # Send results to each dashboard.
-            if not spec_set_project:
+            if not spec_project:
                 urls = [
                     '{0}/submit.php?project={1}'.format(c, project)
                     for c in cdash]
             else:
-                urls = spec_set_cdash
-            tty.msg(urls)
+                urls = spec_cdash
             # iterate over specs from each YAML file.
             for spec in spec_set:
                 if args.time:
@@ -399,8 +398,9 @@ def test_suite(parser, args):
                 if args.time:
                     tty.msg(str(spec.name) + "@" + str(spec.version) +
                             " Build time:  " + _hms(time.time() - build_start))
-                for dashboard in urls:
-                    send_reports(dashboard, path)
+                if not args.redundant_installs:
+                    for dashboard in urls:
+                        send_reports(dashboard, path)
 
             if args.time:
                 tty.msg("Total build time : " + _hms(time.time() - start))
