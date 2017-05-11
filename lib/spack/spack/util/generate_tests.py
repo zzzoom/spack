@@ -33,7 +33,7 @@ class GenerateTests(object):
         self.xsdk = ['xsdk', 'xsdktrilinos', 'trilinos', 'superlu-mt',
                      'superlu-dist', 'petsc', 'superlu', 'hypre', 'alquimia']
 
-        self.cdash = "https://spack.io/cdash/submit.php?project=spack"
+        self.cdash = "https://spack.io/cdash"
         self.seperate_by_compiler = seperate_by_compiler
         methods = {'all-tests': self.generate_all_tests,
                    'xsdk': self.generate_xsdk,

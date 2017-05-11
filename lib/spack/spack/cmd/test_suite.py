@@ -264,9 +264,9 @@ def sort_list_largest_first(spec_sets, args):
                                  reverse=True)
             [return_list.append(spec[0]) for spec in sorted_list]
             tty.msg("sorting complete.... Running tests.")
-            return return_list
+            return return_list, spec_set.cdash, spec_set.project
         else:
-            return spec_set
+            return spec_set, spec_set.cdash, spec_set.project
 
 
 @contextmanager
@@ -291,23 +291,23 @@ def test_suite(parser, args):
     """Compiles a list of tests from a yaml file.
     Runs Spec and concretize then produces cdash format."""
     # pytest.ini lives in the root of the spack repository.
-    with setup_test_db(os.getcwd() + "test_db"):
-        if args.time:
-            start = time.time()
-        if args.generate_tests:
-            sep_by_cmplrs = False
-            use_system_compilers = False
-            latest_versions = False
-            if args.gt_by_compiler:
-                sep_by_cmplrs = True
-            if args.gt_system_compilers:
-                use_system_compilers = True
-            if args.latest_versions:
-                latest_versions = True
-            GenerateTests(use_system_compilers, sep_by_cmplrs,
-                          args.gt_type, latest_versions)
-            tty.msg("test files created.")
-        else:
+    if args.time:
+        start = time.time()
+    if args.generate_tests:
+        sep_by_cmplrs = False
+        use_system_compilers = False
+        latest_versions = False
+        if args.gt_by_compiler:
+            sep_by_cmplrs = True
+        if args.gt_system_compilers:
+            use_system_compilers = True
+        if args.latest_versions:
+            latest_versions = True
+        GenerateTests(use_system_compilers, sep_by_cmplrs,
+                      args.gt_type, latest_versions)
+        tty.msg("test files created.")
+    else:
+        with setup_test_db(os.getcwd() + "test_db"):
             if not args.yaml_files:
                 tty.die("spack test-suite requires at least one argument")
 
@@ -339,22 +339,24 @@ def test_suite(parser, args):
                 if spack.debug:
                     print(traceback.format_exc())
 
-            spec_set = sort_list_largest_first(spec_sets, args)
+            spec_set, spec_set_cdash, spec_set_project = sort_list_largest_first(
+                spec_sets, args)
 
             # Set cdash and project form command, then yaml file, then
             # default.
-            cdash = args.cdash or ['https://spack.io/cdash']
+            cdash = args.cdash or spec_set_cdash or ['https://spack.io/cdash']
             if not isinstance(cdash, list):
                 cdash = [cdash]
-            project = args.project or 'spack'
+            project = args.project or spec_set_project or 'spack'
 
             # Send results to each dashboard.
-            if not spec_set.cdash:
+            if not spec_set_project:
                 urls = [
                     '{0}/submit.php?project={1}'.format(c, project)
                     for c in cdash]
             else:
-                urls = spec_set.cdash
+                urls = spec_set_cdash
+            tty.msg(urls)
             # iterate over specs from each YAML file.
             for spec in spec_set:
                 if args.time:
