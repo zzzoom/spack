@@ -38,9 +38,9 @@ class Amanzi(CMakePackage):
 
     variant('debug', default=False,
             description='Builds a debug version of the librarires')
-    variant('shared', default=False,
+    variant('shared', default=True,
             description='Enables the build of shared libraries')
-    variant('structured', default=False,
+    variant('structured', default=True,
             description='')
     variant('unstructured', default=False,
             description='')
@@ -54,8 +54,8 @@ class Amanzi(CMakePackage):
     depends_on('unittest-cpp')
     depends_on('ascem-io')
     depends_on('netcdf')
-#    depends_on('boxlib')
-#    depends_on('petsc')
+    depends_on('boxlib@1.3.4', when='+structured')
+    depends_on('petsc@3.5.2~superlu-dist',  when='+structured')
 #    depends_on('mstk')
 #    depends_on('metis')
 
@@ -75,8 +75,11 @@ class Amanzi(CMakePackage):
         args.extend(['-DENABLE_Unstructured:BOOL=%s' %
             ('ON' if '+unstructured' in spec else 'OFF')])
 
+        args.extend(['-DAMANZI_PRECISION=DOUBLE'])
+
         # Add MPI
-        args.extend(['-DCMAKE_C_COMPILER=%s'       % spec['mpi'].mpicc,
+        args.extend(['-DENABLE_MPI:BOOL=ON',
+                     '-DCMAKE_C_COMPILER=%s'       % spec['mpi'].mpicc,
                      '-DCMAKE_CXX_COMPILER=%s'     % spec['mpi'].mpicxx,
                      '-DCMAKE_Fortran_COMPILER=%s' % spec['mpi'].mpifc
         ])
@@ -105,10 +108,12 @@ class Amanzi(CMakePackage):
         # Add ASCEM-IO
         args.extend(['-DASCEMIO_DIR=%s' % spec['ascem-io'].prefix])
 
-#        args.extend(['-DCCSE_DIR=%s' % spec['boxlib'].prefix,
-#                     '-DAMANZI_SPACEDIM:INT=2'])
-#
-#        args.extend(['-DPESTC_DIR=%s' % spec['petsc'].prefix])
+        if '+structured' in spec:
+            args.extend(['-DCCSE_DIR=%s' % spec['boxlib'].prefix,
+                         '-DAMANZI_SPACEDIM:INT=3',
+                         '-DCMAKE_EXE_LINKER_FLAGS=-lgfortran -lmpi_mpifh'])
+            
+            args.extend(['-DPETSC_DIR=%s' % spec['petsc'].prefix])
 #
 #        args.extend(['-DENABLE_MSTK_Mesh:BOOL=ON',
 #                     '-DMSTK_DIR=%s' % spec['mstk'].prefix])

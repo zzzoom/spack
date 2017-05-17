@@ -33,15 +33,21 @@ class Boxlib(CMakePackage):
     url = "https://github.com/BoxLib-Codes/BoxLib/archive/16.12.2.tar.gz"
 
     version('16.12.2', 'a28d92a5ff3fbbdbbd0a776a59f18526')
-
+    version('1.3.4',
+            git='https://github.com/BoxLib-Codes/BoxLib.git', tag='v1.3.4')
     depends_on('mpi')
+
+    patch('Fix1.3.4.patch', when='@1.3.4')
 
     def cmake_args(self):
         spec = self.spec
         options = []
 
         options.extend([
-            # '-DBL_SPACEDIM=3',
+            '-DBL_SPACEDIM=3',
+            '-DBL_PRECISION=DOUBLE',
+            '-DENABLE_MPI=1',
+            '-DENABLE_OpenMP=0',
             '-DENABLE_POSITION_INDEPENDENT_CODE=ON',
             '-DENABLE_FBASELIB=ON',
             '-DCMAKE_C_COMPILER=%s' % spec['mpi'].mpicc,
