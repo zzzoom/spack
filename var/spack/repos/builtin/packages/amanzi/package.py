@@ -38,9 +38,9 @@ class Amanzi(CMakePackage):
 
     variant('debug', default=False,
             description='Builds a debug version of the librarires')
-    variant('shared', default=True,
+    variant('shared', default=False,
             description='Enables the build of shared libraries')
-    variant('structured', default=True,
+    variant('structured', default=False,
             description='')
     variant('unstructured', default=False,
             description='')
@@ -56,7 +56,7 @@ class Amanzi(CMakePackage):
     depends_on('netcdf')
     depends_on('boxlib@1.3.4', when='+structured')
     depends_on('petsc@3.5.2~superlu-dist',  when='+structured')
-#    depends_on('mstk')
+    depends_on('mstk')
 #    depends_on('metis')
 
     def cmake_args(self):
@@ -114,9 +114,12 @@ class Amanzi(CMakePackage):
                          '-DCMAKE_EXE_LINKER_FLAGS=-lgfortran -lmpi_mpifh'])
             
             args.extend(['-DPETSC_DIR=%s' % spec['petsc'].prefix])
-#
-#        args.extend(['-DENABLE_MSTK_Mesh:BOOL=ON',
-#                     '-DMSTK_DIR=%s' % spec['mstk'].prefix])
+
+        if '+unstructured' in spec:
+            args.extend(['-DENABLE_MSTK_Mesh:BOOL=ON',
+                         '-DMSTK_DIR=%s' % spec['mstk'].prefix,
+                         '-DMSTK_VERSION=2',
+                         '-DMSTK_VERSION_MINOR:STRING=27'])
 #
 #        args.extend(['-DMETIS_DIR=%s' % spec['metis'].prefix])
 

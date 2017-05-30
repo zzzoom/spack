@@ -57,12 +57,34 @@ class Mstk(CMakePackage):
     version('2_26_rc2', 'e7bb01545c812b24b4dffd2a3e7562d5')
     version('2_26',     'be8c4c1d4f13b23d00ce2020d2354351')
 
+    variant('shared',       default=True,
+            description='Enables the build of shared libraries')
+
     # FIXME: Add dependencies if required.
-    # depends_on('foo')
+    depends_on('mpi')
+    depends_on('metis')
+    depends_on('exodusii')
 
     def cmake_args(self):
-        # FIXME: Add arguments other than
-        # FIXME: CMAKE_INSTALL_PREFIX and CMAKE_BUILD_TYPE
-        # FIXME: If not needed delete this function
+        spec = self.spec
+        prefix = self.prefix
         args = []
+
+        args.extend(['-DMSTK_USE_MARKERS:BOOL=TRUE'])
+        
+#        args.extend(['-DBUILD_SHARED_LIBS:BOOL=%s' % (
+#                'ON' if '+shared' in spec else 'OFF')])
+
+        args.extend(['-DENABLE_PARALLEL:BOOL=TRUE',
+                     '-DCMAKE_C_COMPILER=%s' % spec['mpi'].mpicc,
+                     '-DCMAKE_CXX_COMPILER=%s' % spec['mpi'].mpicxx])
+
+        args.extend(['-DENABLE_METIS:BOOL=TRUE',
+                     '-DMETIS_DIR:PATH=%s' % spec['metis'].prefix])
+
+        args.extend(['-DENABLE_ExodusII:BOOL=TRUE',
+                     '-DExodusII_DIR:PATH=%s' % spec['exodusii'].prefix])
+
+#        args.append(['-DINSTALL_DIR:PATH=%s' % prefix])
+#                     '-DINSTALL_ADD_VERSION:BOOL=FALSE'])
         return args
