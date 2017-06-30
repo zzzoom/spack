@@ -227,7 +227,68 @@ fi
 
 # Save original command for debug logging
 input_command="$@"
-args=("$@")
+args=()
+
+# Parse arguments into separate categories
+includes=()
+libraries=()
+libs=()
+rpaths=()
+other_args=()
+
+while [ -n "$1" ]; do
+    case "$1" in
+        -I*)
+            arg="${1#-I}"
+            if [ -z "$arg" ]; then shift; arg="$1"; fi
+            includes+=("$arg")
+            ;;
+        -L*)
+            arg="${1#-L}"
+            if [ -z "$arg" ]; then shift; arg="$1"; fi
+            libraries+=("$arg")
+            ;;
+        -l*)
+            arg="${1#-l}"
+            if [ -z "$arg" ]; then shift; arg="$1"; fi
+            libs+=("$arg")
+            ;;
+        -Wl,*)
+            arg="${1#-Wl,}"
+            if [ -z "$arg" ]; then shift; arg="$1"; fi
+            if [[ "$arg" = -rpath=* ]]; then
+                rpaths+=("${arg#-rpath=}")
+            elif [[ "$arg" = -rpath ]]; then
+                shift; arg="$1"
+                if [[ "$arg" != -Wl,* ]]; then
+                    die "-Wl,-rpath was not followed by -Wl,*"
+                fi
+                rpaths+=("${arg#-Wl,}")
+            else
+                other_args+=("-Wl,$arg")
+            fi
+            ;;
+        -Xlinker,*)
+            arg="${1#-Xlinker,}"
+            if [ -z "$arg" ]; then shift; arg="$1"; fi
+            if [[ "$arg" = -rpath=* ]]; then
+                rpaths+=("${arg#-rpath=}")
+            elif [[ "$arg" = -rpath ]]; then
+                shift; arg="$1"
+                if [[ "$arg" != -Xlinker,* ]]; then
+                    die "-Xlinker,-rpath was not followed by -Xlinker,*"
+                fi
+                rpaths+=("${arg#-Xlinker,}")
+            else
+                other_args+=("-Xlinker,$arg")
+            fi
+            ;;
+        *)
+            other_args+=("$1")
+            ;;
+    esac
+    shift
+done
 
 # Prepend cppflags, cflags, cxxflags, fcflags, fflags, and ldflags
 
@@ -266,78 +327,67 @@ case "$mode" in cc|ccld)
 esac
 
 # Read spack dependencies from the path environment variable
+# TODO: Flip order where/if necessary
 IFS=':' read -ra deps <<< "$SPACK_DEPENDENCIES"
 for dep in "${deps[@]}"; do
     # Prepend include directories
     if [[ -d $dep/include ]]; then
         if [[ $mode == cpp || $mode == cc || $mode == as || $mode == ccld ]]; then
-            args=("-I$dep/include" "${args[@]}")
+            includes=("$dep/include" "${includes[@]}")
         fi
     fi
 
     # Prepend lib and RPATH directories
     if [[ -d $dep/lib ]]; then
-        if [[ $mode == ccld ]]; then
-            if [[ $SPACK_RPATH_DEPS == *$dep* ]]; then
-                $add_rpaths && args=("$rpath$dep/lib" "${args[@]}")
-            fi
-            if [[ $SPACK_LINK_DEPS == *$dep* ]]; then
-                args=("-L$dep/lib" "${args[@]}")
-            fi
-        elif [[ $mode == ld ]]; then
-            if [[ $SPACK_RPATH_DEPS == *$dep* ]]; then
-                $add_rpaths && args=("-rpath" "$dep/lib" "${args[@]}")
-            fi
-            if [[ $SPACK_LINK_DEPS == *$dep* ]]; then
-                args=("-L$dep/lib" "${args[@]}")
-            fi
+        if [[ $SPACK_RPATH_DEPS == *$dep* ]]; then
+            $add_rpaths && rpaths=("$dep/lib" "${rpaths[@]}")
+        fi
+        if [[ $SPACK_LINK_DEPS == *$dep* ]]; then
+            libraries=("$dep/lib" "${libraries[@]}")
         fi
     fi
 
     # Prepend lib64 and RPATH directories
     if [[ -d $dep/lib64 ]]; then
-        if [[ $mode == ccld ]]; then
-            if [[ $SPACK_RPATH_DEPS == *$dep* ]]; then
-                $add_rpaths && args=("$rpath$dep/lib64" "${args[@]}")
-            fi
-            if [[ $SPACK_LINK_DEPS == *$dep* ]]; then
-                args=("-L$dep/lib64" "${args[@]}")
-            fi
-        elif [[ $mode == ld ]]; then
-            if [[ $SPACK_RPATH_DEPS == *$dep* ]]; then
-                $add_rpaths && args=("-rpath" "$dep/lib64" "${args[@]}")
-            fi
-            if [[ $SPACK_LINK_DEPS == *$dep* ]]; then
-                args=("-L$dep/lib64" "${args[@]}")
-            fi
+        if [[ $SPACK_RPATH_DEPS == *$dep* ]]; then
+            $add_rpaths && rpaths=("$dep/lib64" "${rpaths[@]}")
+        fi
+        if [[ $SPACK_LINK_DEPS == *$dep* ]]; then
+            libraries=("$dep/lib64" "${libraries[@]}")
         fi
     fi
 done
 
 # Include all -L's and prefix/whatever dirs in rpath
-if [[ $mode == ccld ]]; then
-    $add_rpaths && args=("$rpath$SPACK_PREFIX/lib64" "${args[@]}")
-    $add_rpaths && args=("$rpath$SPACK_PREFIX/lib"   "${args[@]}")
-elif [[ $mode == ld ]]; then
-    $add_rpaths && args=("-rpath" "$SPACK_PREFIX/lib64" "${args[@]}")
-    $add_rpaths && args=("-rpath" "$SPACK_PREFIX/lib"   "${args[@]}")
-fi
+$add_rpaths && rpaths=("$rpath$SPACK_PREFIX/lib64" "${rpaths[@]}")
+$add_rpaths && rpaths=("$rpath$SPACK_PREFIX/lib"   "${rpaths[@]}")
 
 # Set extra RPATHs
 IFS=':' read -ra extra_rpaths <<< "$SPACK_COMPILER_EXTRA_RPATHS"
 for extra_rpath in "${extra_rpaths[@]}"; do
-    if [[ $mode == ccld ]]; then
-        $add_rpaths && args=("$rpath$extra_rpath" "${args[@]}")
-    elif [[ $mode == ld ]]; then
-        $add_rpaths && args=("-rpath" "$extra_rpath" "${args[@]}")
-    fi
+    $add_rpaths && rpaths=("$extra_rpath" "${rpaths[@]}")
 done
 
 # Add SPACK_LDLIBS to args
 case "$mode" in
     ld|ccld)
-        args=("${args[@]}" ${SPACK_LDLIBS[@]}) ;;
+        libs=("${libs[@]}" ${SPACK_LDLIBS[@]}) ;;
 esac
+
+# Regather separate categories
+for dir in "${includes[@]}";  do args+=("-I$dir"); done
+args+=("${other_args[@]}")
+for dir in "${libraries[@]}"; do args+=("-L$dir"); done
+for lib in "${libs[@]}"; do args+=("-l$lib"); done
+if [ "$mode" = ccld ]; then
+    for dir in "${rpaths[@]}"; do
+        args+=("$rpath$dir")
+    done
+elif [ "$mode" = ld ]; then
+    for dir in "${rpaths[@]}"; do
+        args+=("-rpath" "$dir")
+    done
+fi
 
 full_command=("$command" "${args[@]}")
 
