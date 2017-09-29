@@ -77,6 +77,10 @@ class AutotoolsPackage(PackageBase):
     #: Whether or not to update ``config.guess`` on old architectures
     patch_config_guess = True
 
+    # Captured compiler flags can be added to this dict to be put on the
+    # configure line.
+    captured_flags = {}
+
     #: Targets for ``make`` during the :py:meth:`~.AutotoolsPackage.build`
     #: phase
     build_targets = []
@@ -188,8 +192,7 @@ class AutotoolsPackage(PackageBase):
         # EnvironmentModification after it is instantiated or no other
         # method trying to affect these variables. Currently both are true
         # flag_val is a tuple (flag, value_list).
-        spack_env.set(flag_val[0].upper(),
-                      ' '.join(flag_val[1]))
+        self.captured_flags[flag_val[0]] = flag_val[1]
         return []
 
     @run_before('autoreconf')
@@ -263,6 +266,11 @@ class AutotoolsPackage(PackageBase):
         and an appropriately set prefix.
         """
         options = ['--prefix={0}'.format(prefix)] + self.configure_args()
+
+        compiler_flag_options = [key.upper() + '=' + ' '.join(val)
+                                  for key, val in self.captured_flags.items()
+                                  if val != []]
+        options.extend(compiler_flag_options)
 
         with working_dir(self.build_directory, create=True):
             inspect.getmodule(self).configure(*options)
