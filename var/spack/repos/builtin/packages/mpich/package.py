@@ -86,23 +86,18 @@ spack package at this time.''',
     conflicts('netmod=tcp', when='device=ch4')
 
     def setup_dependent_environment(self, spack_env, run_env, dependent_spec):
-        # On Cray, the regular compiler wrappers *are* the MPI wrappers.
-        if 'platform=cray' in self.spec:
-            spack_env.set('MPICC',  spack_cc)
-            spack_env.set('MPICXX', spack_cxx)
-            spack_env.set('MPIF77', spack_fc)
-            spack_env.set('MPIF90', spack_fc)
-        else:
-            spack_env.set('MPICC',  join_path(self.prefix.bin, 'mpicc'))
-            spack_env.set('MPICXX', join_path(self.prefix.bin, 'mpic++'))
-            spack_env.set('MPIF77', join_path(self.prefix.bin, 'mpif77'))
-            spack_env.set('MPIF90', join_path(self.prefix.bin, 'mpif90'))
-
-        spack_env.set('MPICH_CC', spack_cc)
-        spack_env.set('MPICH_CXX', spack_cxx)
-        spack_env.set('MPICH_F77', spack_f77)
-        spack_env.set('MPICH_F90', spack_fc)
-        spack_env.set('MPICH_FC', spack_fc)
+        # TUTORIAL: set the following variables for dependents:
+        #
+        # MPICC=join_path(self.prefix.bin, 'mpicc')
+        # MPICXX=join_path(self.prefix.bin, 'mpic++')
+        # MPIF77=join_path(self.prefix.bin, 'mpif77')
+        # MPIF90=join_path(self.prefix.bin, 'mpif90')
+        # MPICH_CC=spack_cc
+        # MPICH_CXX=spack_cxx
+        # MPICH_F77=spack_f77
+        # MPICH_F90=spack_fc
+        # MPICH_FC=spack_fc
+        pass
 
     def setup_dependent_package(self, module, dependent_spec):
         if 'platform=cray' in self.spec:

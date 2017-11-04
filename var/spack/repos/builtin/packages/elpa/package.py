@@ -50,7 +50,6 @@ class Elpa(AutotoolsPackage):
             t = 'http://elpa.mpcdf.mpg.de/elpa-{0}.tar.gz'
         return t.format(str(version))
 
-    # override default implementation which returns static lib
     @property
     def libs(self):
 
@@ -63,17 +62,18 @@ class Elpa(AutotoolsPackage):
     build_directory = 'spack-build'
 
     def setup_environment(self, spack_env, run_env):
-        # TODO: set optimum flags for platform+compiler combo, see
-        # https://github.com/hfp/xconfigure/tree/master/elpa
-        spec = self.spec
-
-        spack_env.set('CC', spec['mpi'].mpicc)
-        spack_env.set('FC', spec['mpi'].mpifc)
-        spack_env.set('CXX', spec['mpi'].mpicxx)
-
-        spack_env.append_flags('LDFLAGS', spec['lapack'].libs.search_flags)
-        spack_env.append_flags('LIBS', spec['lapack'].libs.link_flags)
-        spack_env.set('SCALAPACK_LDFLAGS', spec['scalapack'].libs.joined())
+        # TUTORIAL: set the following environment variables:
+        #
+        # CC=spec['mpi'].mpicc
+        # FC=spec['mpi'].mpifc
+        # CXX=spec['mpi'].mpicxx
+        # SCALAPACK_LDFLAGS=spec['scalapack'].libs.joined()
+        #
+        # and append the following flags:
+        #
+        # LDFLAGS -> spec['lapack'].libs.search_flags
+        # LIBS -> spec['lapack'].libs.link_flags
+        pass
 
     def configure_args(self):
         options = []

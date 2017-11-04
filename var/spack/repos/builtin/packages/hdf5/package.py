@@ -104,10 +104,6 @@ class Hdf5(AutotoolsPackage):
 
         :return: list of matching libraries
         """
-        query_parameters = self.spec.last_query.extra_parameters
-
-        shared = '+shared' in self.spec
-
         # This map contains a translation from query_parameters
         # to the libraries needed
         query2libraries = {
@@ -149,13 +145,23 @@ class Hdf5(AutotoolsPackage):
             ]
         }
 
-        # Turn the query into the appropriate key
-        key = tuple(sorted(query_parameters))
-        libraries = query2libraries[key]
-
-        return find_libraries(
-            libraries, root=self.prefix, shared=shared, recurse=True
-        )
+        # TUTORIAL: you need to fix the implementation below, and
+        # return the correct list of libraries according to the
+        # query parameters your dependency has used.
+        #
+        # You can retrieve the query parameters by doing
+        #
+        # query_parameters = self.spec.last_query.extra_parameters
+        #
+        # and use the map above to query the list of libraries you need to search.
+        #
+        # Finally uncomment the lines below to return a LibraryList
+        # 
+        # shared = '+shared' in self.spec
+        # return find_libraries(
+        #     libraries, root=self.prefix, shared=shared, recurse=True
+        # )
+        return []
 
     @run_before('configure')
     def fortran_check(self):

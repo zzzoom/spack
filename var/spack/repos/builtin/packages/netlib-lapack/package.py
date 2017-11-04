@@ -77,12 +77,9 @@ class NetlibLapack(Package):
             'libblas', root=self.prefix, shared=shared, recurse=True
         )
 
-    @property
-    def lapack_libs(self):
-        shared = True if '+shared' in self.spec else False
-        return find_libraries(
-            'liblapack', root=self.prefix, shared=shared, recurse=True
-        )
+    # TUTORIAL: add a proper `lapack_lib` property, along the lines
+    # of the `blas_lib` property above. The library that provides 
+    # the lapack API is called `liblapack`.
 
     def install_one(self, spec, prefix, shared):
         cmake_args = [
