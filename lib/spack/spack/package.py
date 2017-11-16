@@ -556,7 +556,7 @@ class PackageBase(with_metaclass(PackageMeta, object)):
     #: Do not include @ here in order not to unnecessarily ping the users.
     maintainers = []
 
-    spack.directives.variant('external', default=False, description="Indicates this package is not managed by spack")
+    spack.directives.variant('external', default="", description="Indicates if this package is external and managed by an external package manager. If it is, the package manager along with the package name is given in the format 'manager:name'", values=str)
 
     def __init__(self, spec):
         # this determines how the package should be built.
