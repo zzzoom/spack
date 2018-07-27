@@ -196,6 +196,7 @@ class Petsc(Package):
                    '--download-c2html=0',
                    '--download-sowing=0',
                    '--download-hwloc=0',
+                   '--download-revolve',
                    'COPTFLAGS=',
                    'FOPTFLAGS=',
                    'CXXOPTFLAGS=']
