@@ -62,7 +62,7 @@ class Mfem(Package):
 
     # 'develop' is a special version that is always larger (or newer) than any
     # other version.
-    version('develop', branch='master')
+    version('develop', branch='atpesc-dev')
 
     version('3.4.0',
             '4e73e4fe0482636de3c5dc983cd395839a83cb16f6f509bd88b053e8b3858e05',
