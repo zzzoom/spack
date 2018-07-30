@@ -192,7 +192,7 @@ class Petsc(Package):
 
     def install(self, spec, prefix):
         options = ['--with-ssl=0',
-                   '--with-x=0',
+                   '--with-x=1',
                    '--download-c2html=0',
                    '--download-sowing=0',
                    '--download-hwloc=0',
