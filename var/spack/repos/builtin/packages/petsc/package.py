@@ -197,6 +197,7 @@ class Petsc(Package):
                    '--download-sowing=0',
                    '--download-hwloc=0',
                    '--download-revolve',
+                   '--download-superlu',
                    'COPTFLAGS=',
                    'FOPTFLAGS=',
                    'CXXOPTFLAGS=']
