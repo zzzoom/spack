@@ -125,9 +125,7 @@ _arguments['jobs'] = Args(
 
 _arguments['install_status'] = Args(
     '-I', '--install-status', action='store_true', default=False,
-    help='show install status of packages. packages can be: '
-         'installed [+], missing and needed by an installed package [-], '
-         'or not installed (no annotation)')
+    help='show install status (installed [+], missing [-], not installed)')
 
 _arguments['no_checksum'] = Args(
     '-n', '--no-checksum', action='store_true', default=False,
