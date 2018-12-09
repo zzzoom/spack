@@ -32,6 +32,10 @@ Spack bundles its external dependencies in lib/spack/external.  These
 packages are covered by various permissive licenses.  A summary listing
 follows.  See the license included with each package for full details.
 
+PackageName: ansiescapes
+PackageHomePage: https://pypi.org/project/ansiescapes
+PackageLicenseDeclared: MIT
+
 PackageName: argparse
 PackageHomePage: https://pypi.python.org/pypi/argparse
 PackageLicenseDeclared: Python-2.0
