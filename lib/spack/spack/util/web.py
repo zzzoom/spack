@@ -11,11 +11,20 @@ import ssl
 import sys
 import traceback
 import hashlib
+import multiprocessing.pool
+from multiprocessing.dummy import Pool as ThreadPool
+from threading import Lock as ThreadLock
+from contextlib import contextmanager
 
+from six import string_types
 from six.moves.urllib.request import urlopen, Request
 from six.moves.urllib.error import URLError
 from six.moves.urllib.parse import urljoin
-import multiprocessing.pool
+
+import ansiescapes as ansi
+
+from llnl.util.multibar import BarGroup
+
 
 try:
     # Python 2 had these in the HTMLParser package.
@@ -33,7 +42,6 @@ import llnl.util.tty as tty
 import spack.config
 import spack.cmd
 import spack.url
-import spack.stage
 import spack.error
 import spack.util.crypto
 from spack.util.compression import ALLOWED_ARCHIVE_TYPES
@@ -107,20 +115,7 @@ def _spider(url, visited, root, depth, max_depth, raise_on_error):
         root = re.sub('/index.html$', '', root)
 
     try:
-        context = None
         verify_ssl = spack.config.get('config:verify_ssl')
-        pyver = sys.version_info
-        if (pyver < (2, 7, 9) or (3,) < pyver < (3, 4, 3)):
-            if verify_ssl:
-                tty.warn("Spack will not check SSL certificates. You need to "
-                         "update your Python to enable certificate "
-                         "verification.")
-        elif verify_ssl:
-            # We explicitly create default context to avoid error described in
-            # https://blog.sucuri.net/2016/03/beware-unverified-tls-certificates-php-python.html
-            context = ssl.create_default_context()
-        else:
-            context = ssl._create_unverified_context()
 
         # Make a HEAD request first to check the content type.  This lets
         # us ignore tarballs and gigantic files.
@@ -129,7 +124,7 @@ def _spider(url, visited, root, depth, max_depth, raise_on_error):
         # if you ask for a tarball with Accept: text/html.
         req = Request(url)
         req.get_method = lambda: "HEAD"
-        resp = _urlopen(req, timeout=_timeout, context=context)
+        resp = _urlopen(req, timeout=_timeout, secure=verify_ssl)
 
         if "Content-type" not in resp.headers:
             tty.debug("ignoring page " + url)
@@ -142,7 +137,7 @@ def _spider(url, visited, root, depth, max_depth, raise_on_error):
 
         # Do the real GET request when we know it's just HTML.
         req.get_method = lambda: "GET"
-        response = _urlopen(req, timeout=_timeout, context=context)
+        response = _urlopen(req, timeout=_timeout, secure=verify_ssl)
         response_url = response.geturl()
 
         # Read the page and and stick it in the map we'll return
@@ -227,11 +222,35 @@ def _spider_wrapper(args):
 
 
 def _urlopen(*args, **kwargs):
-    """Wrapper for compatibility with old versions of Python."""
-    # We don't pass 'context' parameter to urlopen because it
-    # was introduces only starting versions 2.7.9 and 3.4.3 of Python.
-    if 'context' in kwargs and kwargs['context'] is None:
-        del kwargs['context']
+    """Wrapper for compatibility with old versions of Python.
+
+    We don't pass the ``context`` parameter to ``urlopen`` because it
+    was introduced in versions 2.7.9 and 3.4.3 of Python.
+    """
+    secure = kwargs.pop('secure', True)
+
+    if 'context' in kwargs:
+        raise ValueError("_urlopen() doesn't accept 'context' argument")
+
+    v = sys.version_info
+    if v < (2, 7, 9) or ((3,) < v < (3, 4, 3)):
+        # warn that these versions only do insecure SSL
+        if secure:
+            tty.warn("Spack will not check SSL certificates. You need to "
+                     "update your Python version to at least 2.7.9 or 3.4.3 "
+                     "to enable certificate verification.")
+
+        # omit the context argument b/c it is not supported
+        if 'context' in kwargs:
+            del kwargs['context']
+
+    else:
+        # We explicitly create default context to avoid error described in
+        # https://blog.sucuri.net/2016/03/beware-unverified-tls-certificates-php-python.html
+        context = (ssl._create_unverified_context() if secure
+                   else ssl.create_default_context())
+        kwargs['context'] = context
+
     return urlopen(*args, **kwargs)
 
 
@@ -383,6 +402,8 @@ def get_checksums_for_versions(
     urls = [url_dict[v] for v in versions]
 
     tty.msg("Downloading...")
+
+    import spack.stage
     version_hashes = []
     i = 0
     for url, version in zip(urls, versions):
@@ -424,12 +445,153 @@ def get_checksums_for_versions(
     return version_lines
 
 
+def _chunk_fetch(response, out, chunk_size=8192, progress_hook=None):
+    """Helper function for ``download()``.
+
+    Args:
+        response (file object): a response returned by ``urlopen()``
+        out (file object): output stream to write fetched data to
+        chunk_size (int): amount to read at a time in bytes
+        progress_hook (callable): this is called approximately every
+            chunk_size() bytes, with bytes so far and total bytes
+    """
+    total_size = response.info().getheader('Content-Length', None)
+    if total_size:
+        total_size = int(total_size.strip())
+
+    bytes_so_far = 0
+    while True:
+        chunk = response.read(chunk_size)
+        bytes_so_far += len(chunk)
+
+        if not chunk:
+            break
+
+        if progress_hook:
+            progress_hook(bytes_so_far, total_size)
+
+        out.write(chunk)
+
+    return bytes_so_far
+
+
+def download(url, out=None, secure=True, chunk_size=8192, progress_hook=None):
+    """Use ``urllib`` to download a file.
+
+    This can run secure or insecure (validate SSL cert or not). The
+    caller can provide a progress hook to be called as bytes arrive.
+
+    Args:
+        url (string): the URL to download
+        out (file object or filename): file object opened for writing
+            (default is basename of URL, in working dir, like ``curl -O``)
+        secure (bool): whether to validate SSL certificates
+        chunk_size (int): number of bytes to download at a time
+        progress_hook (callable): should take two int parameters: bytes
+            so far and total bytes
+
+    TODO: support resuming partial downloads.
+
+    """
+    # calculate this early, as the URL may change with redirects
+    response = _urlopen(url, secure=secure)
+
+    close_out = False
+    if isinstance(out, string_types):
+        out = open(out, 'wb')
+        close_out = True
+    elif out is None:
+        basename = os.path.basename(url)
+        if not basename:
+            raise ValueError(
+                'URL has no basename: must provide output stream or file')
+        out = open(basename, 'wb')
+        close_out = True
+
+    try:
+        _chunk_fetch(response, out, progress_hook=progress_hook)
+    finally:
+        out.flush()
+        if close_out:
+            out.close()
+
+
+class MultiFetch(object):
+    """Fetch a large number of archives reliably."""
+
+    def __init__(self, urls, out=sys.stdout,
+                 max_concurrent=10, max_bars=40, max_retries=1):
+        """Create a multi-fetcher for a set of URLs.
+
+        This will present a progress bar for each URL, to show status of
+        the parallel downloads.
+
+        Args:
+            urls (list): list of URLs to download
+            out (file object): stream to write progress
+            max_concurrent (int, optional): maximum concurrent downloads
+                to do at once
+            max_retries (int, optional): maximum number of times to retry
+                each URL if the download fails
+
+        """
+        self.out = out
+        self.pool = ThreadPool(max_concurrent)
+        self._lock = ThreadLock()
+        self.urls = urls
+        self.bars = BarGroup(bottom_margin=1)
+
+        self.running = 0
+        self.remaining = len(urls)
+
+    @contextmanager
+    def lock(self):
+        """Used to prevent concurrent draws to console."""
+        self._lock.acquire()
+        yield
+        self._lock.release()
+
+    def start(self):
+        """Start the downloads."""
+        def run_bar(i):
+            url = self.urls[i]
+            with self.lock():
+                bar = self.bars.add_bar(suffix='%d %s' % (i, url))
+
+            self.remaining -= 1
+            self.running += 1
+            with self.lock():
+                self.update()
+
+            def update(progress, total):
+                with self.lock():
+                    bar.update(progress, total)
+            download(url, out=str(i), progress_hook=update)
+
+            self.running -= 1
+            with self.lock():
+                self.update()
+
+        self.pool.map(run_bar, range(len(self.urls)))
+
+    def update(self):
+        self.out.write(ansi.cursorUp())
+        self.out.write('\r%d running, %d/%d remaining\r'
+                       % (self.running, self.remaining, len(self.urls)))
+        self.out.write(ansi.cursorDown())
+        self.out.flush()
+
+
 class SpackWebError(spack.error.SpackError):
     """Superclass for Spack web spidering errors."""
 
 
 class VersionFetchError(SpackWebError):
     """Raised when we can't determine a URL to fetch a package."""
+
+
+class TooManyRedirectsError(SpackWebError):
+    """Raised when ``download()`` follows too many redirects."""
 
 
 class NoNetworkConnectionError(SpackWebError):
