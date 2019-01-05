@@ -317,6 +317,10 @@ class Stage(object):
         for path in self.expected_archive_files:
             if os.path.exists(path):
                 return path
+            elif os.path.islink(path):
+                # if the link exists but the target is gone, remove it so
+                # that fetchers don't get confused
+                os.unlink(path)
         else:
             return None
 
