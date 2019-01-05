@@ -30,12 +30,14 @@ from functools import wraps
 from six import string_types, with_metaclass
 
 import llnl.util.tty as tty
+import llnl.util.multibar as mb
 from llnl.util.filesystem import working_dir, mkdirp
 
 import spack.config
 import spack.error
 import spack.util.crypto as crypto
 import spack.util.pattern as pattern
+import spack.util.web as web
 from spack.util.executable import which
 from spack.util.string import comma_and, quote
 from spack.version import Version, ver
@@ -188,22 +190,30 @@ class URLFetchStrategy(FetchStrategy):
                 self.digest = kwargs[h]
 
         self.expand_archive = kwargs.get('expand', True)
-        self.extra_curl_options = kwargs.get('curl_options', [])
-        self._curl = None
-
         self.extension = kwargs.get('extension', None)
 
         if not self.url:
             raise ValueError("URLFetchStrategy requires a url for fetching.")
 
-    @property
-    def curl(self):
-        if not self._curl:
-            self._curl = which('curl', required=True)
-        return self._curl
-
     def source_id(self):
         return self.digest
+
+    def _fetch(self):
+        """Implements fetch using urllib with a custom progress bar."""
+        # TODO: add support for continuing partial downloads
+
+        # we add a progress bar if there is a tty.
+        progress_hook = None
+        if sys.stdout.isatty():
+            bars = mb.BarGroup()
+            progress_hook = bars.add_bar().update
+
+        # do the actual fetch
+        with working_dir(self.stage.path):
+            web.download(
+                self.url,
+                secure=spack.config.get('config:verify_ssl'),
+                progress_hook=progress_hook)
 
     @_needs_stage
     def fetch(self):
@@ -211,92 +221,8 @@ class URLFetchStrategy(FetchStrategy):
             tty.msg("Already downloaded %s" % self.archive_file)
             return
 
-        save_file = None
-        partial_file = None
-        if self.stage.save_filename:
-            save_file = self.stage.save_filename
-            partial_file = self.stage.save_filename + '.part'
-
         tty.msg("Fetching %s" % self.url)
-
-        if partial_file:
-            save_args = ['-C',
-                         '-',  # continue partial downloads
-                         '-o',
-                         partial_file]  # use a .part file
-        else:
-            save_args = ['-O']
-
-        curl_args = save_args + [
-            '-f',  # fail on >400 errors
-            '-D',
-            '-',  # print out HTML headers
-            '-L',  # resolve 3xx redirects
-            self.url,
-        ]
-
-        if not spack.config.get('config:verify_ssl'):
-            curl_args.append('-k')
-
-        if sys.stdout.isatty():
-            curl_args.append('-#')  # status bar when using a tty
-        else:
-            curl_args.append('-sS')  # just errors when not.
-
-        curl_args += self.extra_curl_options
-
-        # Run curl but grab the mime type from the http headers
-        curl = self.curl
-        with working_dir(self.stage.path):
-            headers = curl(*curl_args, output=str, fail_on_error=False)
-
-        if curl.returncode != 0:
-            # clean up archive on failure.
-            if self.archive_file:
-                os.remove(self.archive_file)
-
-            if partial_file and os.path.exists(partial_file):
-                os.remove(partial_file)
-
-            if curl.returncode == 22:
-                # This is a 404.  Curl will print the error.
-                raise FailedDownloadError(
-                    self.url, "URL %s was not found!" % self.url)
-
-            elif curl.returncode == 60:
-                # This is a certificate error.  Suggest spack -k
-                raise FailedDownloadError(
-                    self.url,
-                    "Curl was unable to fetch due to invalid certificate. "
-                    "This is either an attack, or your cluster's SSL "
-                    "configuration is bad.  If you believe your SSL "
-                    "configuration is bad, you can try running spack -k, "
-                    "which will not check SSL certificates."
-                    "Use this at your own risk.")
-
-            else:
-                # This is some other curl error.  Curl will print the
-                # error, but print a spack message too
-                raise FailedDownloadError(
-                    self.url,
-                    "Curl failed with error %d" % curl.returncode)
-
-        # Check if we somehow got an HTML file rather than the archive we
-        # asked for.  We only look at the last content type, to handle
-        # redirects properly.
-        content_types = re.findall(r'Content-Type:[^\r\n]+', headers,
-                                   flags=re.IGNORECASE)
-        if content_types and 'text/html' in content_types[-1]:
-            msg = ("The contents of {0} look like HTML. Either the URL "
-                   "you are trying to use does not exist or you have an "
-                   "internet gateway issue. You can remove the bad archive "
-                   "using 'spack clean <package>', then try again using "
-                   "the correct URL.")
-            tty.warn(msg.format(self.archive_file or "the archive"))
-
-        if save_file:
-            os.rename(partial_file, save_file)
-
+        self._fetch()
         if not self.archive_file:
             raise FailedDownloadError(self.url)
 
@@ -407,6 +333,106 @@ class URLFetchStrategy(FetchStrategy):
             return self.url
         else:
             return "[no url]"
+
+
+class CurlFetchStrategy(URLFetchStrategy):
+    """A URLFetchStrategy that uses the `curl` command instead of urllib."""
+    enabled = True
+
+    def __init__(self, url=None, checksum=None, **kwargs):
+        self._curl = None
+        self.extra_curl_options = kwargs.get('curl_options', [])
+
+    @property
+    def curl(self):
+        if not self._curl:
+            self._curl = which('curl', required=True)
+        return self._curl
+
+    def _fetch(self):
+        save_file = None
+        partial_file = None
+        if self.stage.save_filename:
+            save_file = self.stage.save_filename
+            partial_file = self.stage.save_filename + '.part'
+
+        if partial_file:
+            save_args = ['-C',
+                         '-',  # continue partial downloads
+                         '-o',
+                         partial_file]  # use a .part file
+        else:
+            save_args = ['-O']
+
+        curl_args = save_args + [
+            '-f',  # fail on >400 errors
+            '-D',
+            '-',  # print out HTML headers
+            '-L',  # resolve 3xx redirects
+            self.url,
+        ]
+
+        if not spack.config.get('config:verify_ssl'):
+            curl_args.append('-k')
+
+        if sys.stdout.isatty():
+            curl_args.append('-#')  # status bar when using a tty
+        else:
+            curl_args.append('-sS')  # just errors when not.
+
+        curl_args += self.extra_curl_options
+
+        # Run curl but grab the mime type from the http headers
+        curl = self.curl
+        with working_dir(self.stage.path):
+            headers = curl(*curl_args, output=str, fail_on_error=False)
+
+        if curl.returncode != 0:
+            # clean up archive on failure.
+            if self.archive_file:
+                os.remove(self.archive_file)
+
+            if partial_file and os.path.exists(partial_file):
+                os.remove(partial_file)
+
+            if curl.returncode == 22:
+                # This is a 404.  Curl will print the error.
+                raise FailedDownloadError(
+                    self.url, "URL %s was not found!" % self.url)
+
+            elif curl.returncode == 60:
+                # This is a certificate error.  Suggest spack -k
+                raise FailedDownloadError(
+                    self.url,
+                    "Curl was unable to fetch due to invalid certificate. "
+                    "This is either an attack, or your cluster's SSL "
+                    "configuration is bad.  If you believe your SSL "
+                    "configuration is bad, you can try running spack -k, "
+                    "which will not check SSL certificates."
+                    "Use this at your own risk.")
+
+            else:
+                # This is some other curl error.  Curl will print the
+                # error, but print a spack message too
+                raise FailedDownloadError(
+                    self.url,
+                    "Curl failed with error %d" % curl.returncode)
+
+        # Check if we somehow got an HTML file rather than the archive we
+        # asked for.  We only look at the last content type, to handle
+        # redirects properly.
+        content_types = re.findall(r'Content-Type:[^\r\n]+', headers,
+                                   flags=re.IGNORECASE)
+        if content_types and 'text/html' in content_types[-1]:
+            msg = ("The contents of {0} look like HTML. Either the URL "
+                   "you are trying to use does not exist or you have an "
+                   "internet gateway issue. You can remove the bad archive "
+                   "using 'spack clean <package>', then try again using "
+                   "the correct URL.")
+            tty.warn(msg.format(self.archive_file or "the archive"))
+
+        if save_file:
+            os.rename(partial_file, save_file)
 
 
 class CacheURLFetchStrategy(URLFetchStrategy):
