@@ -8,6 +8,7 @@ from __future__ import division
 from __future__ import print_function
 
 import contextlib
+import six
 import sys
 from datetime import datetime
 
@@ -94,6 +95,21 @@ class ProgressBar(object):
         self.draw()
 
     def update(self, progress, total):
+        """Update the bar with progress so far and a total.
+
+        Arguments:
+            progress (number or str): progress so far
+            total (total): total progress required to finish
+
+        If progress is evrer >= total, the bar is marked done and further
+        updates will raise an error.
+
+        If progress is a string instead of some numeric type, we display
+        its value in the bar instead of showing progress.  You can use
+        this for things that don't support progress, to display messages
+        like "Downloading".  You will need to call ``update()`` with
+        progress >= total to force the bar to complete.
+        """
         if self.done:
             raise RuntimeError("Can't call update once finished!")
 
@@ -105,11 +121,15 @@ class ProgressBar(object):
             self._last_drawn = now
 
         self._last_update = now
-        self.progress = progress if progress <= total else total
 
-        # mark whether we're done or not.
-        if self.progress >= self.total:
-            self.done = True
+        self.progress = progress
+        if not isinstance(progress, six.string_types):
+            if self.progress > self.total:
+                self.progress = self.total
+
+            # mark whether we're done or not.
+            if self.progress >= self.total:
+                self.done = True
 
         # draw every _draw_period seconds, or on the very last call
         delta = now - self._last_drawn
@@ -121,10 +141,18 @@ class ProgressBar(object):
         """Draw the bar on the current line on the screen."""
         self.out.write('\r')
 
-        # format the bar
-        percent = "%.1f" % (100 * self.progress / float(self.total))
-        width_done = int(self.width * self.progress // self.total)
-        bar = ((width_done - 1) * '=') + '>' + ' ' * (self.width - width_done)
+        if isinstance(self.progress, six.string_types):
+            # if it's a string, just put the string in the status bar
+            percent = 0.0
+            content = self.progress[:self.width]
+            padding = ' ' * (self.width - len(content))
+            bar = content + padding
+        else:
+            # if it's a number, draw an arrow according to % total
+            percent = "%.1f" % (100 * self.progress / float(self.total))
+            width_done = int(self.width * self.progress // self.total)
+            padding = ' ' * (self.width - width_done)
+            bar = ((width_done - 1) * '=') + '>' + padding
 
         # not started yet
         if self._last_update is None:
