@@ -12,7 +12,7 @@
 # at least module support exists, and provides suggestions if it
 # doesn't. Source it like this:
 #
-#    . /path/to/spack/share/spack/setup-env.sh
+#    source /path/to/spack/share/spack/setup-env.fish
 #
 ########################################################################
 # This is a wrapper around the spack command that forwards calls to
@@ -39,245 +39,266 @@
 # spack dotfiles.
 ########################################################################
 
-function spack {
-    # Zsh does not do word splitting by default, this enables it for this function only
-    if [ -n "${ZSH_VERSION:-}" ]; then
-        emulate -L sh
-    fi
+echo "WARNING: Fish is not officially support by the Spack community."
+echo "Some of the latest features may not yet be implemented."
 
-    # save raw arguments into an array before butchering them
-    args=( "$@" )
+function spack -d "spack"
 
-    # accumulate initial flags for main spack command
-    _sp_flags=""
-    while [[ "$1" =~ ^- ]]; do
-        _sp_flags="$_sp_flags $1"
-        shift
-    done
+    set -l _argv_original $argv
 
-    # h and V flags don't require further output parsing.
-    if [[ (! -z "$_sp_flags") && ("$_sp_flags" =~ '.*h.*' || "$_sp_flags" =~ '.*V.*') ]]; then
-        command spack $_sp_flags "$@"
-        return
-    fi
+    # In order to properly capture spack flags,
+    # they must *all* be enumerated here.
+    # !! Developers must keep this up-to-date with any changes.
 
-    _sp_subcommand=""
-    if [ -n "$1" ]; then
-        _sp_subcommand="$1"
-        shift
-    fi
-    _sp_spec=("$@")
+    # Each fish opt is required to have a 1 character short id.
+    # The order here is based on
+    # https://spack.readthedocs.io/en/latest/command_index.html
 
-    # Filter out use and unuse.  For any other commands, just run the
-    # command.
-    case $_sp_subcommand in
-        "cd")
-            _sp_arg=""
-            if [ -n "$1" ]; then
-                _sp_arg="$1"
-                shift
-            fi
-            if [[ "$_sp_arg" = "-h" || "$_sp_arg" = "--help" ]]; then
-                command spack cd -h
+    # TODO: validate required opt values, plus better error messages
+
+    set -l options 'h/help' 'H/all-help' 'c-color=' 'C/config-scope='
+    set options $options 'd/debug' 'z-pdb' 'e/env=' 'D/env-dir=' 'E/no-env'
+    set options $options 'u-use-env-repo' 'k/insecure' 'l/enable-locks'
+    set options $options 'L/disable-locks' 'm/mock' 'p/profile'
+    set options $options 'x-storted-profile=' 'y-lines' 'v/verbose'
+    set options $options 't-stacktrace' 'V/version' 'w-print-shell-vars='
+    argparse -n spack --stop-nonopt $options -- $argv
+    or return
+
+    set -l _sp_flags ""
+    if set -q _flag_help
+        set _sp_flags $_sp_flags "--help"
+    end
+    if set -q _flag_all_help
+        set _sp_flags $_sp_flags "--all-help"
+    end
+    if set -q _flag_color
+        set _sp_flags $_sp_flags "--color $_flag_color"
+    end
+    if set -q _flag_config_scope
+        set _sp_flags $_sp_flags "--config-scope $_flag_config_scope"
+    end
+    if set -q _flag_debug
+        set _sp_flags $_sp_flags "--debug"
+    end
+    if set -q _flag_pdb
+        set _sp_flags $_sp_flags "--pdb"
+    end
+    if set -q _flag_env
+        set _sp_flags $_sp_flags "--env $_flag_e"
+    end
+    if set -q _flag_env_dir
+        set _sp_flags $_sp_flags "--env-dir $_flag_D"
+    end
+    if set -q _flag_no_env
+        set _sp_flags $_sp_flags "--no-env"
+    end
+    if set -q _flag_use_env_repo
+        set _sp_flags $_sp_flags "--use-env-repo"
+    end
+    if set -q _flag_insecure
+        set _sp_flags $_sp_flags "--insecure"
+    end
+    if set -q _flag_enable_locks
+        set _sp_flags $_sp_flags "--enable-locks"
+    end
+    if set -q _flag_disable_locks
+        set _sp_flags $_sp_flags "--diable-locks"
+    end
+    if set -q _flag_mock
+        set _sp_flags $_sp_flags "--mock"
+    end
+    if set -q _flag_profile
+        set _sp_flags $_sp_flags "--profile"
+    end
+    if set -q _flag_sorted_profile
+        set _sp_flags $_sp_flags "--sorted-profile $_flag_x"
+    end
+    if set -q _flag_lines
+        set _sp_flags $_sp_flags "--lines"
+    end
+    if set -q _flag_verbose
+        set _sp_flags $_sp_flags "--verbose"
+    end
+    if set -q _flag_stacktrace
+        set _sp_flags $_sp_flags "--stacktrace"
+    end
+    if set -q _flag_version
+        set _sp_flags $_sp_flags "--version"
+    end
+    if set -q _flag_print_shell_vars
+        set _sp_flags $_sp_flags "--print-shell-vars $_flag_w"
+    end
+
+    # an extra ' ' is added to _sp_flags
+    if test (count $_sp_flags) -gt 1
+        set _sp_flags $_sp_flags[2..-1]
+    end
+
+    echo "_sp_flags: $_sp_flags"
+    echo "argv: $argv"
+
+    # if help, version, or no sub-commands
+    #    short circut to spack
+    if set -q _flag_help
+        or test (count $argv) -eq 0
+        command spack -h
+        return 0
+    else if set -q _flag_all_help
+        command spack -H
+        return 0
+    else if set -q _flag_version
+        command spack -V
+        return 0
+    end
+
+    # CONSUME subcommand from argv
+    set -l _sp_subcommand $argv[1]
+    set argv $argv[2..-1]
+
+
+    # match with shell handled commands
+    switch $_sp_subcommand
+        case cd
+            set -l _subcmd_argv_original $argv
+            set -l options 'h/help' 'm/module-dir' 'r/spack-root'
+            set options $options 'i/install-dir' 'p/package-dir'
+            set options $options 'P/packages' 's/stage-dir' 'S/stages'
+            set options $options 'b/build-dir' 'e/env='
+            argparse -n __spack_helper_cd --stop-nonopt $options -- $argv
+            or return
+
+            if set -q _flag_help
+                command spack help cd
+                return 0
+            end
+
+            set -l LOC (command spack $_sp_flags location $_subcmd_argv_original)
+            if test $status -ne 0
+                echo "ERROR with spack location command"
+                return 1
+            else if test -d $LOC
+                cd $LOC
             else
-                LOC="$(spack location $_sp_arg "$@")"
-                if [[ -d "$LOC" ]] ; then
-                    cd "$LOC"
-                else
-                    return 1
-                fi
-            fi
-            return
-            ;;
-        "env")
-            _sp_arg=""
-            if [ -n "$1" ]; then
-                _sp_arg="$1"
-                shift
-            fi
+                return 1
+            end
 
-            if [[ "$_sp_arg" = "-h" || "$_sp_arg" = "--help" ]]; then
-                command spack env -h
-            else
-                case $_sp_arg in
-                    activate)
-                        _a="$@"
-                        if [ -z "$1" -o "${_a#*--sh}" != "$_a" -o "${_a#*--csh}" != "$_a" -o "${_a#*-h}" != "$_a" ]; then
-                            # no args or args contain -h/--help, --sh, or --csh: just execute
-                            command spack "${args[@]}"
-                        else
-                            # actual call to activate: source the output
-                            eval $(command spack $_sp_flags env activate --sh "$@")
-                        fi
-                        ;;
-                    deactivate)
-                        if [ -n "$1" ]; then
-                            # with args: execute the command
-                            command spack "${args[@]}"
-                        else
-                            # no args: source the output.
-                            eval $(command spack $_sp_flags env deactivate --sh)
-                        fi
-                        ;;
-                    *)
-                        command spack "${args[@]}"
-                        ;;
-                esac
-            fi
-            return
-            ;;
-        "use"|"unuse"|"load"|"unload")
-            # Shift any other args for use off before parsing spec.
-            _sp_subcommand_args=""
-            _sp_module_args=""
-            while [[ "$1" =~ ^- ]]; do
-                if [ "$1" = "-r" -o "$1" = "--dependencies" ]; then
-                    _sp_subcommand_args="$_sp_subcommand_args $1"
-                else
-                    _sp_module_args="$_sp_module_args $1"
-                fi
-                shift
-            done
+        case use unuse load unload
+            # parse the flags from this sub-command
+            set -l options 'h/help' 'r/dependencies'
+            argparse -n __spack_helper_use --stop-nonopt $options -- $argv
+            or return
 
-            _sp_spec=("$@")
+            if set -q _flag_help
+                command spack help $_sp_subcommand
+                return 0
+            end
 
-            # Here the user has run use or unuse with a spec.  Find a matching
-            # spec using 'spack module find', then use the appropriate module
-            # tool's commands to add/remove the result from the environment.
-            # If spack module command comes back with an error, do nothing.
-            case $_sp_subcommand in
-                "use")
-                    if _sp_full_spec=$(command spack $_sp_flags module dotkit find $_sp_subcommand_args "${_sp_spec[@]}"); then
-                        use $_sp_module_args $_sp_full_spec
-                    else
-                        $(exit 1)
-                    fi ;;
-                "unuse")
-                    if _sp_full_spec=$(command spack $_sp_flags module dotkit find $_sp_subcommand_args "${_sp_spec[@]}"); then
-                        unuse $_sp_module_args $_sp_full_spec
-                    else
-                        $(exit 1)
-                    fi ;;
-                "load")
-                    if _sp_full_spec=$(command spack $_sp_flags module tcl find $_sp_subcommand_args "${_sp_spec[@]}"); then
-                        module load $_sp_module_args $_sp_full_spec
-                    else
-                        $(exit 1)
-                    fi ;;
-                "unload")
-                    if _sp_full_spec=$(command spack $_sp_flags module tcl find $_sp_subcommand_args "${_sp_spec[@]}"); then
-                        module unload $_sp_module_args $_sp_full_spec
-                    else
-                        $(exit 1)
-                    fi ;;
-            esac
-            ;;
-        *)
-            command spack "${args[@]}"
-            ;;
-    esac
-}
+            switch $_sp_subcommand
+                case use unuse
+                    set -l _sp_full_spec "spack thing"
+                    command spack $_sp_flags module dotkit find $_flag_dependencies $argv
+                    if test $status -ne 0
+                        return 1
+                    end
+                    switch $_sp_subcommand
+                        case use
+                            use $_sp_module_args $_sp_full_spec
+                        case unuse
+                            unuse $_sp_module_args $_sp_full_spec
+                    end
+                case load unload
+                    set -l _sp_full_spec "spack thing"
+                    command spack $_sp_flags module tcl find $_flag_dependencies $argv
+                    if test $status -ne 0
+                        return 1
+                    end
+                    switch $_sp_command
+                        case load
+                            module load $_sp_module_args $_sp_full_spec
+                        case unload
+                            module unload $_sp_module_args $_sp_full_spec
+                    end
+            end
+        case '*'
+            echo "fall through"
+            command spack $_argv_original
+    end
+end
 
 ########################################################################
 # Prepends directories to path, if they exist.
 #      pathadd /path/to/dir            # add to PATH
 # or   pathadd OTHERPATH /path/to/dir  # add to OTHERPATH
 ########################################################################
-function _spack_pathadd {
-    # If no variable name is supplied, just append to PATH
-    # otherwise append to that variable.
-    _pa_varname=PATH
-    _pa_new_path="$1"
-    if [ -n "$2" ]; then
-        _pa_varname="$1"
-        _pa_new_path="$2"
-    fi
+function _spack_pathadd -d "spack helper: adds path to env vars"
+    # add to PATH if only one arg
+    if test (count $argv) -eq 1
+        set -x PATH $argv[1] $PATH
+        return 0
+    end
 
-    # Do the actual prepending here.
-    eval "_pa_oldvalue=\${${_pa_varname}:-}"
-
-    if [ -d "$_pa_new_path" ] && [[ ":$_pa_oldvalue:" != *":$_pa_new_path:"* ]]; then
-        if [ -n "$_pa_oldvalue" ]; then
-            eval "export $_pa_varname=\"$_pa_new_path:$_pa_oldvalue\""
-        else
-            export $_pa_varname="$_pa_new_path"
-        fi
-    fi
-}
-
-# Export spack function so it is available in subshells (only works with bash)
-if [ -n "${BASH_VERSION:-}" ]; then
-	export -f spack
-fi
-
-#
-# Figure out where this file is.  Below code needs to be portable to
-# bash and zsh.
-#
-_sp_source_file="${BASH_SOURCE[0]}"  # Bash's location of last sourced file.
-if [ -z "$_sp_source_file" ]; then
-    _sp_source_file="$0:A"           # zsh way to do it
-    if [[ "$_sp_source_file" == *":A" ]]; then
-        # Not zsh either... bail out with plain old $0,
-        # which WILL NOT work if this is sourced indirectly.
-        _sp_source_file="$0"
-    fi
-fi
+    # if path not in the list, prepend to list
+    if not contains $argv[2] $$argv[1]
+        set -x $argv[1] $argv[2] $$argv[1]
+    end
+end
 
 #
 # Find root directory and add bin to path.
 #
-_sp_share_dir=$(cd "$(dirname $_sp_source_file)" && pwd)
-_sp_prefix=$(cd "$(dirname $(dirname $_sp_share_dir))" && pwd)
-_spack_pathadd PATH       "${_sp_prefix%/}/bin"
-export SPACK_ROOT=${_sp_prefix}
+set -l _sp_share_dir (cd (dirname (status -f)); pwd)
+set -l _sp_prefix (cd (dirname (dirname $_sp_share_dir)); pwd)
+_spack_pathadd PATH $_sp_prefix/bin
+set -x SPACK_ROOT $_sp_prefix
+
 
 #
 # Determine which shell is being used
 #
-function _spack_determine_shell() {
-	PS_FORMAT= ps -p $$ | tail -n 1 | awk '{print $4}' | sed 's/^-//' | xargs basename
-}
-export SPACK_SHELL=$(_spack_determine_shell)
+set -x SPACK_SHELL "fish"
 
 #
 # Check whether a function of the given name is defined
 #
-function _spack_fn_exists() {
-	LANG= type $1 2>&1 | grep -q 'function'
-}
+function _spack_fn_exists -d "check if arg exists as a function"
+    if not type -q $argv
+        return 1
+    else
+        return test (type -t $argv) = "function"
+    end
+end
 
-need_module="no"
-if ! _spack_fn_exists use && ! _spack_fn_exists module; then
-	need_module="yes"
-fi;
 
+set -l need_module "no"
+if not _spack_fn_exists use
+    and not _spack_fn_exists module
+    set need_module "yes"
+end
 
 #
 # make available environment-modules
 #
-if [ "${need_module}" = "yes" ]; then
-    eval `spack --print-shell-vars sh,modules`
-
-    # _sp_module_prefix is set by spack --print-sh-vars
-    if [ "${_sp_module_prefix}" != "not_installed" ]; then
-        #activate it!
-        export MODULE_PREFIX=${_sp_module_prefix}
-        _spack_pathadd PATH "${MODULE_PREFIX}/Modules/bin"
-        module() { eval `${MODULE_PREFIX}/Modules/bin/modulecmd ${SPACK_SHELL} $*`; }
-    fi;
+# Note: multi-line evals become a pipe to source
+if test $need_module = "yes"
+    command spack --print-shell-vars fish,modules | source
+    if test $_sp_module_prefix != "not_installed"
+        set -x MODULE_PREFIX $_sp_module_prefix
+        _spack_pathadd PATH "$MODULE_PREFIX/Modules/bin"
+        function module -d "module"
+            eval ($MODULE_PREFIX/Modules/bin/modulecmd $SPACK_SHELL $argv)
+        end
+    end
 else
-    eval `spack --print-shell-vars sh`
-fi;
+    command spack --print-shell-vars fish | source
+end
+
 
 #
 # set module system roots
 #
-_spack_pathadd DK_NODE    "${_sp_dotkit_root%/}/$_sp_sys_type"
-_spack_pathadd MODULEPATH "${_sp_tcl_root%/}/$_sp_sys_type"
+_spack_pathadd DK_NODE    $_sp_dotkit_root/$_sp_sys_type
+_spack_pathadd MODULEPATH $_sp_tcl_root/$_sp_sys_type
 
-# Add programmable tab completion for Bash
-#
-if [ -n "${BASH_VERSION:-}" ]; then
-    source $_sp_share_dir/spack-completion.bash
-fi
+
+# TODO fish completions coming soon
