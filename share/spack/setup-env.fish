@@ -135,9 +135,6 @@ function spack -d "spack"
         set _sp_flags $_sp_flags[2..-1]
     end
 
-    echo "_sp_flags: $_sp_flags"
-    echo "argv: $argv"
-
     # if help, version, or no sub-commands
     #    short circut to spack
     if set -q _flag_help
@@ -221,7 +218,6 @@ function spack -d "spack"
                     end
             end
         case '*'
-            echo "fall through"
             command spack $_argv_original
     end
 end
