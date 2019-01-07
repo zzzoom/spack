@@ -603,6 +603,9 @@ def main(argv=None):
     # lazily load the subcommand(s) we need later. This allows us to
     # avoid loading all the modules from spack.cmd when we don't need
     # them, which reduces startup latency.
+
+    sys.argv[:] = (value for value in sys.argv if value != '')
+
     parser = make_argument_parser()
     parser.add_argument('command', nargs=argparse.REMAINDER)
     args, unknown = parser.parse_known_args(argv)
