@@ -26,6 +26,16 @@ def test_print_shell_vars_csh(capsys):
     assert "set _sp_module_prefix = " not in out
 
 
+def test_print_shell_vars_fish(capsys):
+    print_setup_info('fish')
+    out, _ = capsys.readouterr()
+
+    assert "set _sp_sys_type " in out
+    assert "set _sp_tcl_root " in out
+    assert "set _sp_lmod_root " in out
+    assert "set _sp_module_prefix " not in out
+
+
 def test_print_shell_vars_sh_modules(capsys):
     print_setup_info('sh', 'modules')
     out, _ = capsys.readouterr()
@@ -44,3 +54,13 @@ def test_print_shell_vars_csh_modules(capsys):
     assert "set _sp_tcl_root = " in out
     assert "set _sp_lmod_root = " in out
     assert "set _sp_module_prefix = " in out
+
+
+def test_print_shell_vars_fish_modules(capsys):
+    print_setup_info('fish', 'modules')
+    out, _ = capsys.readouterr()
+
+    assert "set _sp_sys_type " in out
+    assert "set _sp_tcl_root " in out
+    assert "set _sp_lmod_root " in out
+    assert "set _sp_module_prefix " in out
