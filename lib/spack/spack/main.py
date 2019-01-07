@@ -546,25 +546,32 @@ def _profile_wrapper(command, parser, args, unknown_args):
 
 
 def print_setup_info(*info):
-    """Print basic information needed by setup-env.[c]sh.
+    """Print basic information needed by setup-env.[c|fi]sh.
 
     Args:
         info (list of str): list of things to print: comma-separated list
-            of 'csh', 'sh', or 'modules'
+            of 'csh', 'sh', 'fish', or 'modules'
 
     This is in ``main.py`` to make it fast; the setup scripts need to
     invoke spack in login scripts, and it needs to be quick.
 
     """
-    shell = 'csh' if 'csh' in info else 'sh'
+    if 'csh' in info:
+        shell = 'csh'
+    elif 'fish' in info:
+        shell = 'fish'
+    else:
+        shell = 'sh'
 
     def shell_set(var, value):
         if shell == 'sh':
             print("%s='%s'" % (var, value))
         elif shell == 'csh':
             print("set %s = '%s'" % (var, value))
+        elif shell == 'fish':
+            print("set %s '%s'" % (var, value))
         else:
-            tty.die('shell must be sh or csh')
+            tty.die('shell must be sh, csh, or fish')
 
     # print sys type
     shell_set('_sp_sys_type', spack.architecture.sys_type())
