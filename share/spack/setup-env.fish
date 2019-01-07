@@ -7,7 +7,7 @@
 ########################################################################
 #
 # This file is part of Spack and sets up the spack environment for
-# bash and zsh.  This includes dotkit support, module support, and
+# fish.  This includes dotkit support, module support, and
 # it also puts spack in your path.  The script also checks that
 # at least module support exists, and provides suggestions if it
 # doesn't. Source it like this:
