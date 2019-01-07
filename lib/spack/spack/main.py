@@ -380,7 +380,7 @@ def make_argument_parser(**kwargs):
         help='show version number and exit')
     parser.add_argument(
         '--print-shell-vars', action='store',
-        help="print info needed by setup-env.[c]sh")
+        help="print info needed by setup-env.[c|fi]sh")
 
     return parser
 
