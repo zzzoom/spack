@@ -16,7 +16,10 @@ shell_init_instructions = [
     "",
     "    # for csh and tcsh",
     "    setenv SPACK_ROOT %s" % spack.paths.prefix,
-    "    source %s/setup-env.csh" % spack.paths.share_path, ""
+    "    source %s/setup-env.csh" % spack.paths.share_path,
+    "",
+    "    # for fish",
+    "    source %s/setup-env.fish" % spack.paths.share_path, ""
 ]
 
 
