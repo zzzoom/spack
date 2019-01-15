@@ -180,6 +180,39 @@ function spack -d "spack"
                 return 1
             end
 
+        case env
+            set -l options 'h/help'
+            argparse -n __spack_helper_env --stop-nonopt $options -- $argv
+            or return
+
+            if set -q _flag_help
+                or test (count $argv) -eq 0
+                command spack help env
+                return 0
+            end
+
+            #consume to next subcommand
+            set -l _sp_env_subcmd $argv[1]
+            set argv $argv[2..-1]
+
+            switch $_sp_env_subcmd
+                case activate
+                    echo "spack activate"
+                    if test (count $argv) -eq 0
+                        command spack $_argv_original
+                    else
+                        eval (command spack $_sp_flags env activate --sh $argv)
+                    end
+
+                case deactivate
+                    echo "spack deactivate"
+                    if test (count $argv) -eq 0
+                        eval (command spack $_sp_flags env deactivate --sh)
+                    else
+                        command spack $_argv_original
+                    end
+            end
+
         case use unuse load unload
             # parse the flags from this sub-command
             set -l options 'h/help' 'r/dependencies'
