@@ -28,7 +28,7 @@ from spack.filesystem_view import YamlFilesystemView
 from spack.util.environment import EnvironmentModifications
 import spack.architecture as architecture
 from spack.spec import Spec
-from spack.spec_list import SpecList
+from spack.spec_list import SpecList, InvalidSpecConstraintError
 from spack.variant import UnknownVariantError
 from spack.util.executable import which
 
@@ -479,12 +479,12 @@ class Environment(object):
 
         self.read_specs = OrderedDict()
 
-        for item in self.yaml.values()[0].get('definitions', []):
+        for item in list(self.yaml.values())[0].get('definitions', []):
             entry = copy.deepcopy(item)
             when = _eval_conditional(entry.pop('when', 'True'))
             assert len(entry) == 1
             if when:
-                name, spec_list = entry.items()[0]
+                name, spec_list = list(entry.items())[0]
                 user_specs = SpecList(name, [s for s in spec_list if s],
                                       self.read_specs.copy())
                 if name in self.read_specs:
@@ -669,15 +669,19 @@ class Environment(object):
         added = False
         existing = False
         for i, (name, speclist) in enumerate(self.read_specs.items()):
+            # Iterate over all named lists from an OrderedDict()
             if name == list_name:
-                # TODO: Add conditional which reimplements name-level checking here
+                # We need to modify this list
+                # TODO: Add conditional which reimplements name-level checking
                 existing = str(spec) in speclist.yaml_list
                 if not existing:
                     speclist.add(str(spec))
                     added = True
             elif added:
+                # We've already modified a list, so all later lists need to
+                # have their references updated.
                 new_reference = dict((n, self.read_specs[n])
-                                     for n in self.read_specs.keys()[:i])
+                                     for n in list(self.read_specs.keys())[:i])
                 speclist.update_reference(new_reference)
         return bool(not existing)
 
@@ -687,7 +691,9 @@ class Environment(object):
 
         removed = False
         for i, (name, speclist) in enumerate(self.read_specs.items()):
+            # Iterate over all named lists from an OrderedDict()
             if name == list_name:
+                # We need to modify this list
                 # try abstract specs first
                 matches = []
 
@@ -699,10 +705,13 @@ class Environment(object):
                     specs_hashes = zip(
                         self.concretized_user_specs, self.concretized_order)
                     matches = [
-                        s for s, h in specs_hashes if query_spec.dag_hash() == h]
+                        s for s, h in specs_hashes
+                        if query_spec.dag_hash() == h
+                    ]
 
                 if not matches:
-                    raise SpackEnvironmentError("Not found: {0}".format(query_spec))
+                    raise SpackEnvironmentError(
+                        "Not found: {0}".format(query_spec))
 
                 for spec in matches:
                     if spec in speclist:
@@ -719,8 +728,10 @@ class Environment(object):
                         removed = True
 
             elif removed:
+                # We've already modified one list, so all later lists need
+                # their references updated.
                 new_reference = dict((n, self.read_specs[n])
-                                     for n in self.read_specs.keys()[:i])
+                                     for n in list(self.read_specs.keys())[:i])
                 speclist.update_reference(new_reference)
 
     def concretize(self, force=False):
@@ -784,7 +795,8 @@ class Environment(object):
             self._add_concrete_spec(spec, concrete)
         else:
             # spec might be in the user_specs, but not installed.
-            spec = next(s for s in self.user_specs if s.satisfies(user_spec))  # TODO: Redo name-based comparison for old style envs
+            # TODO: Redo name-based comparison for old style envs
+            spec = next(s for s in self.user_specs if s.satisfies(user_spec))
             concrete = self.specs_by_hash.get(spec.dag_hash())
             if not concrete:
                 concrete = spec.concretized()
@@ -1114,7 +1126,8 @@ class Environment(object):
         self._repo = None
 
         # put any changes in the definitions in the YAML
-        for i, (name, speclist) in enumerate(self.read_specs.items()[:-1]):
+        named_speclists = list(self.read_specs.items())
+        for i, (name, speclist) in enumerate(named_speclists[:-1]):
             conf = config_dict(self.yaml)
             yaml_list = conf.get('definitions', [])[i].setdefault(name, [])
             yaml_list[:] = speclist.yaml_list
