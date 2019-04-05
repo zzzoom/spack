@@ -76,6 +76,9 @@ config:
   # archives. If false, Spack skips the checksum step.
   checksum: true
 
+  # If set to true, Spack will run the install process using gentoo sandbox
+  # to isolate the build. If false, Spack does not isolate the build
+  sandbox: false
 
   # If set to true, `spack install` and friends will NOT clean
   # potentially harmful variables from the build environment. Use wisely.

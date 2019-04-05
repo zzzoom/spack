@@ -48,6 +48,7 @@ properties = {
             'install_missing_compilers': {'type': 'boolean'},
             'debug': {'type': 'boolean'},
             'checksum': {'type': 'boolean'},
+            'sandbox': {'type': 'boolean'},
             'locks': {'type': 'boolean'},
             'dirty': {'type': 'boolean'},
             'build_language': {'type': 'string'},

@@ -90,6 +90,7 @@ the dependencies"""
         '--source', action='store_true', dest='install_source',
         help="install source files in prefix")
     arguments.add_common_arguments(subparser, ['no_checksum'])
+    arguments.add_common_arguments(subparser, ['sandbox'])
     subparser.add_argument(
         '-v', '--verbose', action='store_true',
         help="display verbose build output while installing")
@@ -229,6 +230,9 @@ def install(parser, args, **kwargs):
 
     if args.no_checksum:
         spack.config.set('config:checksum', False, scope='command_line')
+
+    if args.sandbox:
+        spack.config.set('config:sandbox', True, scope='command_line')
 
     # Parse cli arguments and construct a dictionary
     # that will be passed to Package.do_install API

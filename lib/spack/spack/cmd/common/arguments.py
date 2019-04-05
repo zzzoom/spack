@@ -132,3 +132,7 @@ _arguments['install_status'] = Args(
 _arguments['no_checksum'] = Args(
     '-n', '--no-checksum', action='store_true', default=False,
     help="do not use checksums to verify downloaded files (unsafe)")
+
+_arguments['sandbox'] = Args(
+    '-s', '--sandbox', action='store_true', default=False,
+    help="sandbox the build using gentoo sandbox")
