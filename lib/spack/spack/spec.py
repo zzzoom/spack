@@ -1725,7 +1725,7 @@ class Spec(object):
         except Exception as e:
             raise sjson.SpackJSONError("error parsing JSON spec:", str(e))
 
-    def _concretize_helper(self, presets=None, visited=None):
+    def _concretize_helper(self, concretizer, presets=None, visited=None):
         """Recursive helper function for concretize().
            This concretizes everything bottom-up.  As things are
            concretized, they're added to the presets, and ancestors
@@ -1748,7 +1748,7 @@ class Spec(object):
         # Concretize deps first -- this is a bottom-up process.
         for name in sorted(self._dependencies.keys()):
             changed |= self._dependencies[
-                name].spec._concretize_helper(presets, visited)
+                name].spec._concretize_helper(concretizer, presets, visited)
 
         if self.name in presets:
             changed |= self.constrain(presets[self.name])
@@ -1757,8 +1757,6 @@ class Spec(object):
             # to presets below, their constraints will all be merged, but we'll
             # still need to select a concrete package later.
             if not self.virtual:
-                import spack.concretize
-                concretizer = spack.concretize.concretizer
                 changed |= any(
                     (concretizer.concretize_architecture(self),
                      concretizer.concretize_compiler(self),
@@ -1786,7 +1784,7 @@ class Spec(object):
             if concrete.name not in dependent._dependencies:
                 dependent._add_dependency(concrete, deptypes)
 
-    def _expand_virtual_packages(self):
+    def _expand_virtual_packages(self, concretizer):
         """Find virtual packages in this spec, replace them with providers,
            and normalize again to include the provider's (potentially virtual)
            dependencies.  Repeat until there are no virtual deps.
@@ -1826,8 +1824,6 @@ class Spec(object):
                 if not replacement:
                     # Get a list of possible replacements in order of
                     # preference.
-                    import spack.concretize
-                    concretizer = spack.concretize.concretizer
                     candidates = concretizer.choose_virtual_or_external(spec)
 
                     # Try the replacements in order, skipping any that cause
@@ -1917,11 +1913,13 @@ class Spec(object):
 
         user_spec_deps = self.flat_dependencies(copy=False)
 
+        import spack.concretize
+        concretizer = spack.concretize.Concretizer(self)
         while changed:
             changes = (self.normalize(force, tests=tests,
                                       user_spec_deps=user_spec_deps),
-                       self._expand_virtual_packages(),
-                       self._concretize_helper())
+                       self._expand_virtual_packages(concretizer),
+                       self._concretize_helper(concretizer))
             changed = any(changes)
             force = True
 

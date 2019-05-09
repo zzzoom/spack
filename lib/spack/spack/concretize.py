@@ -35,13 +35,8 @@ import spack.compilers
 import spack.architecture
 import spack.error
 import spack.tengine
-from spack.config import config
 from spack.version import ver, Version, VersionList, VersionRange
 from spack.package_prefs import PackagePrefs, spec_externals, is_spec_buildable
-
-
-#: Concretizer singleton
-concretizer = llnl.util.lang.Singleton(lambda: Concretizer())
 
 
 #: impements rudimentary logic for ABI compatibility
@@ -52,25 +47,11 @@ class Concretizer(object):
     """You can subclass this class to override some of the default
        concretization strategies, or you can override all of them.
     """
-    def __init__(self):
+    def __init__(self, spec):
         # controls whether we check that compiler versions actually exist
         # during concretization. Used for testing and for mirror creation
-        self.check_for_compiler_existence = not config.get(
+        self.check_for_compiler_existence = not spack.config.get(
             'config:install_missing_compilers', False)
-
-    @contextmanager
-    def disable_compiler_existence_check(self):
-        saved = self.check_for_compiler_existence
-        self.check_for_compiler_existence = False
-        yield
-        self.check_for_compiler_existence = saved
-
-    @contextmanager
-    def enable_compiler_existence_check(self):
-        saved = self.check_for_compiler_existence
-        self.check_for_compiler_existence = True
-        yield
-        self.check_for_compiler_existence = saved
 
     def _valid_virtuals_and_externals(self, spec):
         """Returns a list of candidate virtual dep providers and external

@@ -132,12 +132,12 @@ class TestConcretize(object):
         assert concrete['mpich2'].satisfies('mpich2@1.3.1:1.4')
 
     def test_concretize_enable_disable_compiler_existence_check(self):
-        with spack.concretize.concretizer.enable_compiler_existence_check():
+        with spack.config.override('config:install_missing_compilers', False):
             with pytest.raises(
                     spack.concretize.UnavailableCompilerVersionError):
                 check_concretize('dttop %gcc@100.100')
 
-        with spack.concretize.concretizer.disable_compiler_existence_check():
+        with spack.config.override('config:install_missing_compilers', True):
             spec = check_concretize('dttop %gcc@100.100')
             assert spec.satisfies('%gcc@100.100')
             assert spec['dtlink3'].satisfies('%gcc@100.100')
@@ -272,7 +272,7 @@ class TestConcretize(object):
 
     def test_no_matching_compiler_specs(self, mock_config):
         # only relevant when not building compilers as needed
-        with spack.concretize.concretizer.enable_compiler_existence_check():
+        with spack.config.override('config:install_missing_compilers', False):
             s = Spec('a %gcc@0.0.0')
             with pytest.raises(
                     spack.concretize.UnavailableCompilerVersionError):
