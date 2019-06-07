@@ -13,6 +13,7 @@ import spack.repo
 from spack.concretize import find_spec
 from spack.spec import Spec, CompilerSpec
 from spack.spec import ConflictsInSpecError, SpecError
+from spack.spec import InvalidPlatformSettingError
 from spack.version import ver
 from spack.test.conftest import MockPackage, MockPackageMultiRepo
 
@@ -564,3 +565,11 @@ class TestConcretize(object):
         # Make sure the concrete spec are top-level specs with no dependents
         for spec in concrete_specs:
             assert not spec.dependents()
+
+    @pytest.mark.parametrize('abstract_spec', [
+        'root ^ dep platform=foo',
+        'root ^dep arch=foo-bar-baz'])
+    def test_concretize_dependency_platform_fails(self, abstract_spec):
+        with pytest.raises(InvalidPlatformSettingError):
+            spec = Spec(abstract_spec)
+            spec.concretize()

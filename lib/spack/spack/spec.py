@@ -964,6 +964,23 @@ class Spec(object):
         elif spec_like is not None:
             raise TypeError("Can't make spec out of %s" % type(spec_like))
 
+    def check_platform_consistency(self):
+        invalid = set()
+
+        for dep in self.traverse(root=False):
+            plat = str(spack.architecture.platform())
+            dplat = dep.architecture.platform if dep.architecture else None
+            rplat = self.architecture.platform if self.architecture else plat
+            if dplat and dplat != rplat and dplat != plat and not dep.concrete:
+                invalid.add((dep, dplat))
+
+        if invalid:
+            msg = "Attempt to set platform on non-concrete dependency.\n"
+            for dep, plat in invalid:
+                msg += "*Platform set to %s for dependency %s.\n" % (plat, dep)
+            msg += "If necessary, set platform on root spec %s." % self.name
+            raise InvalidPlatformSettingError(msg)
+
     @property
     def external(self):
         return bool(self.external_path) or bool(self.external_module)
@@ -1908,6 +1925,8 @@ class Spec(object):
         if self._concrete:
             return
 
+        self.check_platform_consistency()
+
         changed = True
         force = False
 
@@ -2331,6 +2350,10 @@ class Spec(object):
 
         # Ensure first that all packages & compilers in the DAG exist.
         self.validate_or_raise()
+
+        # Ensure that dependencies do not have platforms set different from the root
+        self.check_platform_consistency()
+
         # Clear the DAG and collect all dependencies in the DAG, which will be
         # reapplied as constraints. All dependencies collected this way will
         # have been created by a previous execution of 'normalize'.
@@ -3765,6 +3788,7 @@ class SpecParser(spack.parse.Parser):
                 if s.architecture and not s.architecture.platform and \
                         (s.architecture.os or s.architecture.target):
                     s._set_architecture(platform=platform_default)
+
         return specs
 
     def parse_compiler(self, text):
@@ -4188,3 +4212,7 @@ class ConflictsInSpecError(SpecError, RuntimeError):
 class SpecDependencyNotFoundError(SpecError):
     """Raised when a failure is encountered writing the dependencies of
     a spec."""
+
+
+class InvalidPlatformSettingError(SpecError):
+    """Raised when a dependency platform is set different from the root."""

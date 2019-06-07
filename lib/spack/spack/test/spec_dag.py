@@ -313,8 +313,8 @@ class TestSpecDag(object):
             spec.normalize()
 
     def test_unsatisfiable_architecture(self, set_dependency):
-        set_dependency('mpileaks', 'mpich platform=test target=be')
-        spec = Spec('mpileaks ^mpich platform=test target=fe ^callpath'
+        set_dependency('mpileaks', 'mpich target=be')
+        spec = Spec('mpileaks ^mpich target=fe ^callpath'
                     ' ^dyninst ^libelf ^libdwarf')
         with pytest.raises(spack.spec.UnsatisfiableArchitectureSpecError):
             spec.normalize()
