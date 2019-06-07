@@ -342,7 +342,9 @@ class Concretizer(object):
         try:
             spec.compiler = next(
                 c for c in matches
-                if _proper_compiler_style(c, spec.architecture)).copy()
+                if (not self.check_for_compiler_existence) or
+                _proper_compiler_style(c, spec.architecture)
+            ).copy()
         except StopIteration:
             # No compiler with a satisfactory spec has a suitable arch
             _compiler_concretization_failure(
