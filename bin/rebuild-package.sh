@@ -233,7 +233,8 @@ if [[ $? -ne 0 ]]; then
 
     # Install package, using the buildcache from the local mirror to
     # satisfy dependencies.
-    BUILD_ID_LINE=`spack -d -k -v install --use-cache --cdash-upload-url "${CDASH_UPLOAD_URL}" --cdash-build "${JOB_SPEC_NAME}" --cdash-site "Spack AWS Gitlab Instance" --cdash-track "Experimental" -f "${SPEC_YAML_PATH}" | grep "buildSummary\\.php"`
+    INSTALL_ARGS="--use-cache --cdash-upload-url \"${CDASH_UPLOAD_URL}\" --cdash-build \"${JOB_SPEC_NAME}\" --cdash-site \"Spack AWS Gitlab Instance\" --cdash-track \"Experimental\" -f \"${SPEC_YAML_PATH}\""
+    BUILD_ID_LINE=`(spack -d -k -v install ${INSTALL_ARGS} || spack -d -k -v install -j 1 ${INSTALL_ARGS}) | grep "buildSummary\\.php"`
     check_error $? "spack install"
 
     # By parsing the output of the "spack install" command, we can get the
