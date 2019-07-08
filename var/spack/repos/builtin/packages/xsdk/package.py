@@ -34,14 +34,14 @@ class Xsdk(Package):
     depends_on('hypre@2.12.1~internal-superlu', when='@0.3.0')
     depends_on('hypre@xsdk-0.2.0~internal-superlu', when='@xsdk-0.2.0')
 
-    depends_on('mfem@develop+mpi+hypre+superlu-dist+petsc~sundials+examples+miniapps', when='@develop')
-    depends_on('mfem@3.4.0+mpi+hypre+superlu-dist+petsc+sundials+examples+miniapps', when='@0.4.0')
-    depends_on('mfem@3.3.2+mpi+hypre+superlu-dist+petsc+sundials+examples+miniapps', when='@0.3.0')
+    #depends_on('mfem@develop+mpi+hypre+superlu-dist+petsc~sundials+examples+miniapps', when='@develop')
+    #depends_on('mfem@3.4.0+mpi+hypre+superlu-dist+petsc+sundials+examples+miniapps', when='@0.4.0')
+    #depends_on('mfem@3.3.2+mpi+hypre+superlu-dist+petsc+sundials+examples+miniapps', when='@0.3.0')
 
-    depends_on('superlu-dist@develop', when='@develop')
-    depends_on('superlu-dist@6.1.0', when='@0.4.0')
-    depends_on('superlu-dist@5.2.2', when='@0.3.0')
-    depends_on('superlu-dist@xsdk-0.2.0', when='@xsdk-0.2.0')
+    #depends_on('superlu-dist@develop', when='@develop')
+    #depends_on('superlu-dist@6.1.0', when='@0.4.0')
+    #depends_on('superlu-dist@5.2.2', when='@0.3.0')
+    #depends_on('superlu-dist@xsdk-0.2.0', when='@xsdk-0.2.0')
 
     depends_on('trilinos@develop+hypre+superlu-dist+metis+hdf5~mumps+boost~suite-sparse+tpetra+nox+ifpack2+zoltan2+amesos2~exodus+dtk+intrepid2+shards',
                when='@develop')
@@ -61,59 +61,59 @@ class Xsdk(Package):
     depends_on('petsc@xsdk-0.2.0+trilinos+mpi+hypre+superlu-dist+metis+hdf5~mumps+double~int64',
                when='@xsdk-0.2.0')
 
-    depends_on('dealii@develop~assimp~python~doc~gmsh+petsc+slepc+mpi+trilinos~int64+hdf5~netcdf+metis~sundials~ginkgo~symengine', when='@develop +dealii')
-    depends_on('dealii@9.0.1~assimp~python~doc~gmsh+petsc~slepc+mpi+trilinos~int64+hdf5~netcdf+metis~ginkgo~symengine', when='@0.4.0 +dealii')
+    #depends_on('dealii@develop~assimp~python~doc~gmsh+petsc+slepc+mpi+trilinos~int64+hdf5~netcdf+metis~sundials~ginkgo~symengine', when='@develop +dealii')
+    #depends_on('dealii@9.0.1~assimp~python~doc~gmsh+petsc~slepc+mpi+trilinos~int64+hdf5~netcdf+metis~ginkgo~symengine', when='@0.4.0 +dealii')
 
-    depends_on('pflotran@develop', when='@develop')
-    depends_on('pflotran@xsdk-0.4.0', when='@0.4.0')
-    depends_on('pflotran@xsdk-0.3.0', when='@0.3.0')
-    depends_on('pflotran@xsdk-0.2.0', when='@xsdk-0.2.0')
+    #depends_on('pflotran@develop', when='@develop')
+    #depends_on('pflotran@xsdk-0.4.0', when='@0.4.0')
+    #depends_on('pflotran@xsdk-0.3.0', when='@0.3.0')
+    #depends_on('pflotran@xsdk-0.2.0', when='@xsdk-0.2.0')
 
-    depends_on('alquimia@develop', when='@develop')
-    depends_on('alquimia@xsdk-0.4.0', when='@0.4.0')
-    depends_on('alquimia@xsdk-0.3.0', when='@0.3.0')
-    depends_on('alquimia@xsdk-0.2.0', when='@xsdk-0.2.0')
+    #depends_on('alquimia@develop', when='@develop')
+    #depends_on('alquimia@xsdk-0.4.0', when='@0.4.0')
+    #depends_on('alquimia@xsdk-0.3.0', when='@0.3.0')
+    #depends_on('alquimia@xsdk-0.2.0', when='@xsdk-0.2.0')
 
     depends_on('sundials@4.1.0~int64+hypre', when='@develop')
     depends_on('sundials@3.2.1~int64+hypre', when='@0.4.0')
     depends_on('sundials@3.1.0~int64+hypre', when='@0.3.0')
 
-    depends_on('plasma@18.11.1:', when='@develop %gcc@6.0:')
-    depends_on('plasma@18.11.1:', when='@0.4.0 %gcc@6.0:')
+    #depends_on('plasma@18.11.1:', when='@develop %gcc@6.0:')
+    #depends_on('plasma@18.11.1:', when='@0.4.0 %gcc@6.0:')
 
-    depends_on('magma@2.4.0', when='@develop +cuda')
-    depends_on('magma@2.4.0', when='@0.4.0 +cuda')
-    depends_on('magma@2.2.0', when='@0.3.0 +cuda')
+    #depends_on('magma@2.4.0', when='@develop +cuda')
+    #depends_on('magma@2.4.0', when='@0.4.0 +cuda')
+    #depends_on('magma@2.2.0', when='@0.3.0 +cuda')
 
     depends_on('amrex@develop+sundials', when='@develop %intel')
     depends_on('amrex@develop+sundials', when='@develop %gcc')
     depends_on('amrex@18.10.1', when='@0.4.0 %intel')
     depends_on('amrex@18.10.1', when='@0.4.0 %gcc')
 
-    depends_on('slepc@develop', when='@develop')
-    depends_on('slepc@3.10.1', when='@0.4.0')
+    #depends_on('slepc@develop', when='@develop')
+    #depends_on('slepc@3.10.1', when='@0.4.0')
 
-    depends_on('omega-h@develop', when='@develop +omega-h')
-    depends_on('omega-h@9.19.1', when='@0.4.0 +omega-h')
+    #depends_on('omega-h@develop', when='@develop +omega-h')
+    #depends_on('omega-h@9.19.1', when='@0.4.0 +omega-h')
 
-    depends_on('strumpack@master', when='@develop')
-    depends_on('strumpack@3.1.1', when='@0.4.0')
+    #depends_on('strumpack@master', when='@develop')
+    #depends_on('strumpack@3.1.1', when='@0.4.0')
 
-    depends_on('pumi@develop', when='@develop')
-    depends_on('pumi@2.2.0', when='@0.4.0')
+    #depends_on('pumi@develop', when='@develop')
+    #depends_on('pumi@2.2.0', when='@0.4.0')
 
-    depends_on('tasmanian@develop+xsdkflags+blas~openmp', when='@develop')
-    depends_on('tasmanian@develop+xsdkflags+blas+cuda+magma~openmp', when='@develop +cuda')
-    depends_on('tasmanian@6.0+xsdkflags+blas~openmp', when='@0.4.0')
-    depends_on('tasmanian@6.0+xsdkflags+blas+cuda+magma~openmp', when='@0.4.0 +cuda')
+    #depends_on('tasmanian@develop+xsdkflags+blas~openmp', when='@develop')
+    #depends_on('tasmanian@develop+xsdkflags+blas+cuda+magma~openmp', when='@develop +cuda')
+    #depends_on('tasmanian@6.0+xsdkflags+blas~openmp', when='@0.4.0')
+    #depends_on('tasmanian@6.0+xsdkflags+blas+cuda+magma~openmp', when='@0.4.0 +cuda')
 
     # the Fortran 2003 bindings of phist require python@3:, but this
     # creates a conflict with other packages like petsc@develop. Actually
     # these are type='build' dependencies, but spack reports a conflict anyway.
     # This will be fixed once the new concretizer becomes available
     # (says @adamjsteward)
-    depends_on('phist@develop kernel_lib=tpetra ~fortran ~scamac ~openmp ~host', when='@develop')
-    depends_on('phist@1.7.5 kernel_lib=tpetra ~fortran ~scamac ~openmp ~host', when='@0.4.0')
+    #depends_on('phist@develop kernel_lib=tpetra ~fortran ~scamac ~openmp ~host', when='@develop')
+    #depends_on('phist@1.7.5 kernel_lib=tpetra ~fortran ~scamac ~openmp ~host', when='@0.4.0')
 
     # xSDKTrilinos depends on the version of Trilinos built with
     # +tpetra which is turned off for faster xSDK
