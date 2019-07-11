@@ -85,8 +85,8 @@ class Xsdk(Package):
     #depends_on('magma@2.4.0', when='@0.4.0 +cuda')
     #depends_on('magma@2.2.0', when='@0.3.0 +cuda')
 
-    depends_on('amrex@develop+sundials', when='@develop %intel')
-    depends_on('amrex@develop+sundials', when='@develop %gcc')
+    depends_on('amrex@develop+sundials dimensions=2', when='@develop %intel')
+    depends_on('amrex@develop+sundials dimensions=2', when='@develop %gcc')
     depends_on('amrex@18.10.1', when='@0.4.0 %intel')
     depends_on('amrex@18.10.1', when='@0.4.0 %gcc')
 
