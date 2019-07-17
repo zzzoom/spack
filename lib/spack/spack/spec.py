@@ -1907,11 +1907,18 @@ class Spec(object):
 
         user_spec_deps = self.flat_dependencies(copy=False)
 
+        print("CONCRETIZING:", self)
+        print("DEPS:        ", self.dependencies())
+        print("US DEPS:     ", user_spec_deps)
+
         while changed:
+            print(self.tree(color=True))
             changes = (self.normalize(force, tests=tests,
                                       user_spec_deps=user_spec_deps),
                        self._expand_virtual_packages(),
                        self._concretize_helper())
+            print(changes)
+            print()
             changed = any(changes)
             force = True
 
@@ -2203,6 +2210,10 @@ class Spec(object):
         changed = False
         dep = dependency.spec
 
+        print()
+        print("merging ", dep)
+        changes = []
+
         # If it's a virtual dependency, try to find an existing
         # provider in the spec, and merge that.
         if dep.virtual:
@@ -2226,6 +2237,8 @@ class Spec(object):
                     if required:
                         raise UnsatisfiableProviderSpecError(required[0], dep)
             provider_index.update(dep)
+
+        changes.append(changed)
 
         # If the spec isn't already in the set of dependencies, add it.
         # Note: dep is always owned by this method. If it's from the
@@ -2257,6 +2270,7 @@ class Spec(object):
                     e.provided)
 
                 raise
+        changes.append(changed)
 
         # Add merged spec to my deps and recurse
         spec_dependency = spec_deps[dep.name]
@@ -2265,6 +2279,9 @@ class Spec(object):
 
         changed |= spec_dependency._normalize_helper(
             visited, spec_deps, provider_index, tests)
+        changes.append(changed)
+        print(changes)
+
         return changed
 
     def _normalize_helper(self, visited, spec_deps, provider_index, tests):
