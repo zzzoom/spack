@@ -414,6 +414,12 @@ class Trilinos(CMakePackage):
                 'ON' if '+ml' in spec else 'OFF'),
             '-DTrilinos_ENABLE_MueLu:BOOL=%s' % (
                 'ON' if '+muelu' in spec else 'OFF'),
+            # additional MueLu options for ATPESC
+            '-DMueLu_ENABLE_TESTS:STRING=ON',
+            '-DMueLu_ENABLE_EXAMPLES:STRING=ON',
+            '-DMueLu_ENABLE_Experimental:STRING=ON',
+            '-DXpetra_ENABLE_Experimental=ON',
+
             '-DTrilinos_ENABLE_NOX:BOOL=%s' % (
                 'ON' if '+nox' in spec else 'OFF'),
             '-DTrilinos_ENABLE_Piro:BOOL=%s' % (
@@ -728,8 +734,8 @@ class Trilinos(CMakePackage):
         if '+explicit_template_instantiation' in spec and '+tpetra' in spec:
             options.extend([
                 '-DTpetra_INST_DOUBLE:BOOL=ON',
-                '-DTpetra_INST_INT_LONG:BOOL=ON',
-                '-DTpetra_INST_INT_LONG_LONG:BOOL=ON',
+                #'-DTpetra_INST_INT_LONG:BOOL=ON',
+                #'-DTpetra_INST_INT_LONG_LONG:BOOL=ON',
                 '-DTpetra_INST_COMPLEX_DOUBLE=%s' % complex_s,
                 '-DTpetra_INST_COMPLEX_FLOAT=%s' % complex_float_s,
                 '-DTpetra_INST_FLOAT=%s' % float_s,
