@@ -11,11 +11,13 @@ the main server for a particular package is down.  Or, if the computer
 where spack is run is not connected to the internet, it allows spack
 to download packages directly from a mirror (e.g., on an intranet).
 """
+import contextlib
 import sys
 import os
 import traceback
 import os.path
 import operator
+import time
 
 import six
 
@@ -39,6 +41,8 @@ import spack.util.url as url_util
 import spack.spec
 from spack.version import VersionList
 from spack.util.spack_yaml import syaml_dict
+
+from multiprocessing.dummy import Pool as ThreadPool
 
 
 def _display_mirror_entry(size, name, url, type_=None):
@@ -439,16 +443,27 @@ def create(path, specs):
 
     mirror_cache = spack.caches.MirrorCache(mirror_root)
     mirror_stats = MirrorStats()
+    pool = ThreadPool(100)
     try:
         spack.caches.mirror_cache = mirror_cache
         # Iterate through packages and download all safe tarballs for each
-        for spec in specs:
-            mirror_stats.next_spec(spec)
-            add_single_spec(spec, mirror_root, mirror_stats)
+        args = [(spec, mirror_root, mirror_stats) for spec in specs]
+
+        pool.map(_add_single_spec_wrapper, args)
+
     finally:
+        pool.close()
         spack.caches.mirror_cache = None
 
     return mirror_stats.stats()
+
+
+@contextlib.contextmanager
+def timestamp():
+    ts = tty._timestamp
+    tty._timestamp = True
+    yield
+    tty._timestamp = ts
 
 
 class MirrorStats(object):
@@ -490,6 +505,17 @@ class MirrorStats(object):
 
     def error(self):
         self.errors.add(self.current_spec)
+
+
+def _add_single_spec_wrapper(args):
+    spec, _, _ = args
+
+    start = time.time()
+    add_single_spec(*args)
+    seconds = time.time() - start
+
+    with timestamp():
+        tty.msg("Fetched %s in %.2d seconds" % (spec, seconds))
 
 
 def add_single_spec(spec, mirror_root, mirror_stats):
