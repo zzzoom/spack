@@ -33,11 +33,11 @@ def shebang_too_long(path):
 
 def filter_shebang(path):
     """Adds a second shebang line, using sbang, at the beginning of a file."""
-    with open(path, 'r') as original_file:
+    with open(path, 'rb') as original_file:
         original = original_file.read()
 
     # This line will be prepended to file
-    new_sbang_line = '#!/bin/bash %s/bin/sbang\n' % spack.paths.prefix
+    new_sbang_line = b'#!/bin/bash %s/bin/sbang\n' % spack.paths.prefix.encode()
 
     # Skip files that are already using sbang.
     if original.startswith(new_sbang_line):
@@ -47,12 +47,12 @@ def filter_shebang(path):
     # else any mention of "lua" in the document will lead to spurious matches.
 
     # Use --! instead of #! on second line for lua.
-    if re.search(r'^#!(/[^/\n]*)*lua\b', original):
+    if re.search(rb'^#!(/[^/\n]*)*lua\b', original):
         original = re.sub(r'^#', '--', original)
 
     # Use //! instead of #! on second line for node.js.
-    if re.search(r'^#!(/[^/\n]*)*node\b', original):
-        original = re.sub(r'^#', '//', original)
+    if re.search(rb'^#!(/[^/\n]*)*node\b', original):
+        original = re.sub(rb'^#', '//', original)
 
     # Change non-writable files to be writable if needed.
     saved_mode = None
@@ -61,7 +61,7 @@ def filter_shebang(path):
         saved_mode = st.st_mode
         os.chmod(path, saved_mode | stat.S_IWRITE)
 
-    with open(path, 'w') as new_file:
+    with open(path, 'wb') as new_file:
         new_file.write(new_sbang_line)
         new_file.write(original)
 
