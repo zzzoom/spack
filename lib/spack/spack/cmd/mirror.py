@@ -43,13 +43,13 @@ def setup_parser(subparser):
         'specs', nargs=argparse.REMAINDER,
         help="specs of packages to put in mirror")
     create_parser.add_argument(
+        '-i', '--installed', action='store_true',
+        help="mirror all installed packages in current env or in spack")
+    create_parser.add_argument(
         '-a', '--all', action='store_true',
-        help="mirror all versions of all packages in Spack, or all packages"
-             " in the current environment if there is an active environment"
-             " (this requires significant time and space)")
+        help="mirror all versions of all packages in current env or in spack")
     create_parser.add_argument(
         '-f', '--file', help="file with specs of packages to put in mirror")
-
     create_parser.add_argument(
         '-D', '--dependencies', action='store_true',
         help="also fetch all dependencies")
@@ -255,50 +255,28 @@ def mirror_create(args):
     with spack.concretize.disable_compiler_existence_check():
         specs = spack.cmd.parse_specs(args.specs, concretize=True)
 
-        # If there is a file, parse each line as a spec and add it to the list.
-        if args.file:
-            if specs:
-                tty.die("Cannot pass specs on the command line with --file.")
-            specs = _read_specs_from_file(args.file)
+    # If there is a file, parse each line as a spec and add it to the list.
+    if args.file:
+        if specs:
+            tty.die("Cannot pass specs on the command line with --file.")
+        specs = _read_specs_from_file(args.file)
 
-        if not specs:
-            # If nothing is passed, use environment or all if no active env
-            if not args.all:
-                tty.die("No packages were specified.",
-                        "To mirror all packages, use the '--all' option"
-                        " (this will require significant time and space).")
+    if not any((specs, args.all, args.installed)):
+        tty.die(
+            "No packages were specified.",
+            "Did you mean to use the '--all' or '--installed' options? "
+            "(These will require significant time and space)."
+        )
 
-            env = ev.get_env(args, 'mirror')
-            if env:
-                mirror_specs = env.specs_by_hash.values()
-            else:
-                specs = [Spec(n) for n in spack.repo.all_package_names()]
-                mirror_specs = spack.mirror.get_all_versions(specs)
-                mirror_specs.sort(
-                    key=lambda s: (s.name, s.version))
-        else:
-            # If the user asked for dependencies, traverse spec DAG get them.
-            if args.dependencies:
-                new_specs = set()
-                for spec in specs:
-                    spec.concretize()
-                    for s in spec.traverse():
-                        new_specs.add(s)
-                specs = list(new_specs)
-
-            # Skip external specs, as they are already installed
-            external_specs = [s for s in specs if s.external]
-            specs = [s for s in specs if not s.external]
-
-            for spec in external_specs:
-                msg = 'Skipping {0} as it is an external spec.'
-                tty.msg(msg.format(spec.cshort_spec))
-
-            if num_versions == 'all':
-                mirror_specs = spack.mirror.get_all_versions(specs)
-            else:
-                mirror_specs = spack.mirror.get_matching_versions(
-                    specs, num_versions=num_versions)
+    env = ev.get_env(args, 'mirror')
+    mirror_specs = spack.mirror.expand_spec_list(
+        specs=specs,
+        env=env,
+        installed=args.installed,
+        all=args.all,
+        dependencies=args.dependencies,
+        num_versions=num_versions,
+    )
 
     mirror = spack.mirror.Mirror(
         args.directory or spack.config.get('config:source_cache'))

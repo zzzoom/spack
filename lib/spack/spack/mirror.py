@@ -39,6 +39,7 @@ import spack.util.spack_json as sjson
 import spack.util.spack_yaml as syaml
 import spack.util.url as url_util
 import spack.spec
+import spack.store
 from spack.version import VersionList
 from spack.util.spack_yaml import syaml_dict
 
@@ -399,6 +400,90 @@ def get_matching_versions(specs, num_versions=1):
         matching.extend(matching_spec)
 
     return matching
+
+
+def expand_spec_list(
+        specs=None,
+        env=None,
+        installed=False,
+        all=False,
+        dependencies=True,
+        num_versions=1
+):
+    """Given a list of specs and some options, return which versions to mirror.
+
+    This allows the caller to specify a specific list of specs, the set
+    of specs installed in Spack or in an environment, or all specs in
+    Spack.  It also lets the caller expand those to include their
+    dependencies and either *all* possible versions or only matching
+    versions.  It is used by `spack mirror` to create mirrors in a number
+    of contexts.
+
+    Arguments:
+        specs (list, optional): a list of specific specs to consider -- if not
+            provided, assume all specs in the environment or in spack
+        env (Environment, optional): environment to consider if specs is empty
+        installed (bool, optional): get only installed versions of specs
+        all (bool, optional): get all possible versions of all specs and
+            dependencies (cannot use with installed)
+        dependencies (bool, optional): also return dependencies of packages
+            in specs list
+        num_versions (int, optional): number of versions to get for each spec
+
+    Return:
+        (list): specs with version attributes to include in a mirror
+
+    """
+    # TODO: is this just fancy db.query()? Seems generally useful.
+
+    # TODO: this function is a good example of how we have to duplicate
+    # TODO: logic to do similar things in and outside of an environment.
+    # TODO; We should figure out a way to consolidate the env/non-env code
+    # TODO: paths here.
+    if not specs:
+        if installed:
+            if env:
+                specs = env.specs_by_hash.values()
+            else:
+                specs = spack.store.db.query(installed=True)
+        elif all:
+            if env:
+                specs = env.roots()
+            else:
+                specs = [
+                    spack.spec.Spec(n) for n in spack.repo.app_package_names()
+                ]
+
+    # If the user asked for dependencies, traverse spec DAG get them.
+    if dependencies:
+        new_specs = set()
+        for spec in specs:
+            if all:
+                for name in spec.package_class.possible_dependencies():
+                    new_specs.update(spack.spec.Spec(name))
+            else:
+                with spack.concretize.disable_compiler_existence_check():
+                    spec.concretize()
+                for s in spec.traverse():
+                    new_specs.add(s)
+        specs = list(new_specs)
+
+    # Skip external specs, as they are already installed
+    external_specs = [s for s in specs if s.external]
+    specs = [s for s in specs if not s.external]
+
+    for spec in external_specs:
+        msg = 'Skipping {0} as it is an external spec.'
+        tty.msg(msg.format(spec.cshort_spec))
+
+    if all:
+        specs = spack.mirror.get_all_versions(specs)
+    else:
+        specs = spack.mirror.get_matching_versions(
+            specs, num_versions=num_versions)
+
+    specs.sort(key=lambda s: (s.name, s.version))
+    return specs
 
 
 def create(path, specs):
