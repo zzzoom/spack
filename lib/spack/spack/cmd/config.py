@@ -62,7 +62,8 @@ def setup_parser(subparser):
                             help='configuration value to set. Nested values '
                             'separated by colons (:)')
 
-    remove_parser = sp.add_parser('remove', help='remove configuration parameters')
+    remove_parser = sp.add_parser('remove', aliases=['rm'],
+                                  help='remove configuration parameters')
     remove_parser.add_argument('value',
                             help='configuration value to remove. Nested values '
                             'separated by colons (:).')
@@ -227,5 +228,6 @@ def config(parser, args):
               'blame': config_blame,
               'edit': config_edit,
               'add': config_add,
+              'rm': config_remove,
               'remove': config_remove}
     action[args.config_command](args)
