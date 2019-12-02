@@ -205,8 +205,8 @@ def spec_externals(spec):
     name = spec.name
 
     external_specs = []
-    pkg_paths = allpkgs.get(name, {}).get('paths', None)
-    pkg_modules = allpkgs.get(name, {}).get('modules', None)
+    pkg_paths = allpkgs.get(name, {}).get('paths', {})
+    pkg_modules = allpkgs.get(name, {}).get('modules', {})
     if (not pkg_paths) and (not pkg_modules):
         return []
 
