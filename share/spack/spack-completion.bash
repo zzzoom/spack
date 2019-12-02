@@ -309,7 +309,7 @@ function _spack_config {
     then
         compgen -W "-h --help --scope" -- "$cur"
     else
-        compgen -W "blame edit get" -- "$cur"
+        compgen -W "blame edit get add remove rm" -- "$cur"
     fi
 }
 
@@ -337,6 +337,20 @@ function _spack_config_get {
         compgen -W "-h --help" -- "$cur"
     else
         compgen -W "mirrors repos modules packages config compilers" -- "$cur"
+    fi
+}
+
+function _spack_config_add {
+    if $list_options
+    then
+        compgen -W "-h --help" -- "$cur"
+    fi
+}
+
+function _spack_config_remove {
+    if $list_options
+    then
+        compgen -W "-h --help" -- "$cur"
     fi
 }
 
