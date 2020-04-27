@@ -780,12 +780,16 @@ class PackageInstaller(object):
         proceeding with the installation.
 
         The ``stop_at`` argument is removed from the installation arguments.
+        The last phase is also set to None if it is the last phase of the
+        package already
 
         Args:
             kwargs:
               ``stop_at``': last installation phase to be executed (or None)
         """
         self.pkg.last_phase = kwargs.pop('stop_at', None)
+        if self.pkg.last_phase == self.pkg.phases[-1]:
+            self.pkg.last_phase = None
         if self.pkg.last_phase is not None and \
                 self.pkg.last_phase not in self.pkg.phases:
             tty.die('\'{0}\' is not an allowed phase for package {1}'
