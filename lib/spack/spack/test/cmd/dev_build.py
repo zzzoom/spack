@@ -37,6 +37,7 @@ def test_dev_build_until(tmpdir, mock_packages, install_mockery):
             assert f.read() == spec.package.replacement_string
 
     assert not os.path.exists(spec.prefix)
+    assert not spack.store.db.query(spec, installed=True)
 
 
 def test_dev_build_fails_already_installed(tmpdir, mock_packages,
