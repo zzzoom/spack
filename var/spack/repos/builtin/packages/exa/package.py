@@ -6,14 +6,13 @@
 from spack import *
 
 
-class Bat(Package):
-    """A cat(1) clone with wings."""
+class Exa(Package):
+    """exa is a replacement for ls written in Rust."""
 
-    homepage = 'https://github.com/sharkdp/bat'
-    url = 'https://github.com/sharkdp/bat/archive/v0.13.0.tar.gz'
+    homepage = 'https://the.exa.website'
+    url = 'https://github.com/ogham/exa/archive/v0.9.0.tar.gz'
 
-    version('0.13.0', sha256='f4aee370013e2a3bc84c405738ed0ab6e334d3a9f22c18031a7ea008cd5abd2a')
-    version('0.12.1', sha256='1dd184ddc9e5228ba94d19afc0b8b440bfc1819fef8133fe331e2c0ec9e3f8e2')
+    version('0.9.0', sha256='96e743ffac0512a278de9ca3277183536ee8b691a46ff200ec27e28108fef783')
 
     depends_on('rust')
 
