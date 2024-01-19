@@ -138,7 +138,7 @@ class Wrf(Package):
     variant("netcdf_classic", default=False, description="Use NetCDF without HDF5 compression")
     variant("adios2", default=False, description="Enable IO support through ADIOS2 library")
 
-    elec_versions = ["3.9.1.1"]
+    elec_versions = ["3.9.1.1", "4.3.1"]
     elec_when = "@{} build_type=dmpar".format(",".join(elec_versions))
     variant("elec", default=False, description="Enable WRF-ELEC", when=elec_when)
 
@@ -230,11 +230,16 @@ class Wrf(Package):
         when="@4.5: %arm",
     )
 
-    # WRF-ELEC 3.9.1.1 patch
+    # WRF-ELEC patches
     patch(
         "https://github.com/zzzoom/wrf3-elec-spack/compare/spack-3.9.1.1...spack-elec-3.9.1.1.patch?full_index=1",
         sha256="fce84a45b9867386ccd7eba7df74c237383373fdd4a0143daf9fe2f063306c23",
         when="@3.9.1.1 +elec",
+    )
+    patch(
+        "https://github.com/zzzoom/wrf4-elec-spack/compare/spack-4.3.1...spack-elec-4.3.1.patch?full_index=1",
+        sha256="f51da11574eaccc4f85b8a378336e935b61f7b2d97948b5e78031c7977bc6b67",
+        when="@4.3.1 +elec",
     )
 
     depends_on("pkgconfig", type=("build"))
